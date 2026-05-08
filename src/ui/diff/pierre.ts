@@ -152,14 +152,59 @@ function parseStyleValue(styleValue: unknown) {
   return styles;
 }
 
+// Maps every Pierre-theme hex color to its semantic role so that each AppTheme's syntaxColors
+// palette fully controls what renders, rather than Pierre's built-in Shiki palette bleeding through.
 const RESERVED_PIERRE_TOKEN_COLORS = {
   dark: {
+    // keywords / storage (const, let, export, import, return, if, ...)
+    "#ff678d": "keyword",
+    // entity.name.tag, JSON property names, and other tag-like scopes
     "#ff6762": "keyword",
+    // strings
     "#5ecc71": "string",
+    // functions and method calls
+    "#9d6afb": "function",
+    // variables, identifiers, object-literal keys
+    "#ffa359": "default",
+    // function / variable parameters
+    "#adadb1": "default",
+    // comments
+    "#84848a": "comment",
+    // numeric literals and booleans
+    "#68cdf2": "number",
+    "#ffd452": "number",
+    "#ffca00": "number",
+    // types and class names
+    "#d568ea": "type",
+    // attribute names (HTML/JSX attributes, CSS selectors)
+    "#61d5c0": "property",
+    // operators and punctuation
+    "#08c0ef": "punctuation",
+    "#79797f": "punctuation",
   },
   light: {
+    // keywords / storage
+    "#fc2b73": "keyword",
+    // entity.name.tag, JSON property names
     "#d52c36": "keyword",
+    // strings
     "#199f43": "string",
+    // functions and method calls
+    "#7b43f8": "function",
+    // variables, identifiers, object-literal keys
+    "#d47628": "default",
+    // comments
+    "#84848a": "comment",
+    // numeric literals and booleans
+    "#1ca1c7": "number",
+    "#d5a910": "number",
+    // types and class names
+    "#c635e4": "type",
+    // attribute names
+    "#16a994": "property",
+    // operators and punctuation
+    "#08c0ef": "punctuation",
+    "#79797f": "punctuation",
   },
 } as const;
 // After style parsing, token colors still need one normalization step so syntax hues never
