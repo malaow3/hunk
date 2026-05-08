@@ -58,8 +58,9 @@ describe("themes", () => {
   });
 
   test("exposes every bundled theme as a selectable theme", () => {
-    expect(availableThemeIds()).toEqual([...BUNDLED_SHIKI_THEME_IDS]);
-    expect(availableThemes().map((theme) => theme.id)).toEqual([...BUNDLED_SHIKI_THEME_IDS]);
+    const expectedIds = [...BUNDLED_SHIKI_THEME_IDS, "minimal"];
+    expect(availableThemeIds()).toEqual(expectedIds);
+    expect(availableThemes().map((theme) => theme.id)).toEqual(expectedIds);
 
     for (const themeId of BUNDLED_SHIKI_THEME_IDS) {
       const theme = resolveTheme(themeId, null);
@@ -68,6 +69,12 @@ describe("themes", () => {
       expect(theme.syntaxTheme).toBe(themeId);
       expect(theme.syntaxColors.default).toBeTruthy();
     }
+
+    // The hand-authored theme labels itself and falls back to Pierre's dark syntax theme.
+    const minimal = resolveTheme("minimal", null);
+    expect(minimal.label).toBe("Minimal");
+    expect(minimal.appearance).toBe("dark");
+    expect(minimal.syntaxColors.default).toBeTruthy();
   });
 
   test("derives GitHub default surfaces from bundled theme metadata", () => {
@@ -261,12 +268,14 @@ describe("themes", () => {
 
     expect(availableThemeIds(customThemes)).toEqual([
       ...BUNDLED_SHIKI_THEME_IDS,
+      "minimal",
       "custom",
       "ocean",
       "sunset",
     ]);
     expect(availableThemes(customThemes).map((theme) => [theme.id, theme.label])).toEqual([
       ...BUNDLED_SHIKI_THEME_IDS.map((themeId) => [themeId, themeId]),
+      ["minimal", "Minimal"],
       // Named themes label themselves by id; the original single-slot theme keeps "Custom".
       ["custom", "Custom"],
       ["ocean", "Ocean"],

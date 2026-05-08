@@ -68,6 +68,17 @@ export const BUNDLED_SHIKI_THEME_IDS = [
 
 export type BundledShikiThemeId = (typeof BUNDLED_SHIKI_THEME_IDS)[number];
 
+/** Hand-authored bundled themes that are not derived from a Shiki theme. */
+export const HAND_AUTHORED_THEME_IDS = ["minimal"] as const;
+
+export type HandAuthoredThemeId = (typeof HAND_AUTHORED_THEME_IDS)[number];
+
+/** Every built-in theme id in menu order: Shiki-derived themes, then hand-authored ones. */
+export const ALL_BUILT_IN_THEME_IDS = [
+  ...BUNDLED_SHIKI_THEME_IDS,
+  ...HAND_AUTHORED_THEME_IDS,
+] as const;
+
 export const LEGACY_THEME_ID_ALIASES = {
   graphite: "github-dark-default",
   midnight: "github-dark-dimmed",
@@ -91,6 +102,14 @@ export function resolveBundledShikiThemeId(
   return BUNDLED_SHIKI_THEME_IDS.includes(resolvedThemeId as BundledShikiThemeId)
     ? (resolvedThemeId as BundledShikiThemeId)
     : undefined;
+}
+
+/** Resolve an id when it names any built-in theme, Shiki-derived or hand-authored. */
+export function resolveBuiltInThemeId(themeId: string | undefined) {
+  return resolveBundledShikiThemeId(themeId) ??
+    (HAND_AUTHORED_THEME_IDS.includes(themeId as HandAuthoredThemeId)
+      ? (themeId as HandAuthoredThemeId)
+      : undefined);
 }
 
 export interface BundledShikiThemeDiffColors {

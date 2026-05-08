@@ -1,7 +1,10 @@
 import fs from "node:fs";
 import { dirname, join } from "node:path";
 import { sanitizeTerminalLine } from "../../lib/terminalText";
-import { BUNDLED_SHIKI_THEME_IDS, LEGACY_THEME_ID_ALIASES } from "../theme/catalog";
+import {
+  ALL_BUILT_IN_THEME_IDS,
+  LEGACY_THEME_ID_ALIASES,
+} from "../theme/catalog";
 import {
   createInvalidThemeIdNotice,
   createThemeCollisionNotice,
@@ -77,7 +80,7 @@ export interface PersistedViewPreferences {
   cursorLine: CursorLine;
 }
 
-export const BUILT_IN_THEME_IDS = BUNDLED_SHIKI_THEME_IDS;
+export const BUILT_IN_THEME_IDS = ALL_BUILT_IN_THEME_IDS;
 // Widen the large literal tuple before formatting it, avoiding TypeScript's deep tuple inference.
 const BUILT_IN_THEME_IDS_FOR_MESSAGES: readonly string[] = BUILT_IN_THEME_IDS;
 const DEFAULT_THEME_ID = "github-dark-default";

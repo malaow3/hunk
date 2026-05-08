@@ -1,6 +1,10 @@
 import type { StartupNotice } from "../process/startupNotice";
 import type { NamedCustomThemeConfig } from "../../extension-api/types";
-import { BUNDLED_SHIKI_THEME_IDS, resolveBundledShikiThemeId } from "./catalog";
+import {
+  ALL_BUILT_IN_THEME_IDS,
+  HAND_AUTHORED_THEME_IDS,
+  resolveBuiltInThemeId,
+} from "./catalog";
 import { LEGACY_CUSTOM_SYNTAX_COLOR_KEYS } from "./legacySyntaxScopes";
 
 /** Provider-neutral shape accepted from any custom-theme registration source. */
@@ -15,16 +19,16 @@ export const LEGACY_CUSTOM_THEME_ID = "custom";
 /**
  * Ids a custom theme may not claim.
  *
- * Bundled Shiki ids are taken by built-in themes, and `auto` is the reserved
+ * Built-in ids are taken by bundled themes, and `auto` is the reserved
  * request that means "follow the terminal background".
  */
 const RESERVED_THEME_IDS: ReadonlySet<string> = new Set<string>([
   "auto",
-  ...BUNDLED_SHIKI_THEME_IDS,
+  ...ALL_BUILT_IN_THEME_IDS,
 ]);
 
 // Widen the large literal tuple before formatting it, avoiding TypeScript's deep tuple inference.
-const BUNDLED_THEME_IDS_FOR_MESSAGES: readonly string[] = BUNDLED_SHIKI_THEME_IDS;
+const BUNDLED_THEME_IDS_FOR_MESSAGES: readonly string[] = ALL_BUILT_IN_THEME_IDS;
 
 /** Lowercase words joined by `-` or `_`, so ids stay typeable as a `--theme` value. */
 const CUSTOM_THEME_ID_PATTERN = /^[a-z0-9]+(?:[-_][a-z0-9]+)*$/;
@@ -116,7 +120,7 @@ export function normalizeThemeColorValue(value: string) {
  * name), or an issue string when the value names no bundled theme.
  */
 export function resolveThemeBase(value: unknown): { base: string } | { issue: string } {
-  const resolved = typeof value === "string" ? resolveBundledShikiThemeId(value) : undefined;
+  const resolved = typeof value === "string" ? resolveBuiltInThemeId(value) : undefined;
   if (!resolved) {
     return {
       issue: `must be a built-in theme id. Known themes: ${BUNDLED_THEME_IDS_FOR_MESSAGES.join(", ")}`,

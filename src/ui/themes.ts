@@ -234,14 +234,73 @@ function buildShikiTheme(themeId: BundledShikiThemeId): AppTheme {
   return { ...themeBase, syntaxColors };
 }
 
-export const THEMES: AppTheme[] = BUNDLED_SHIKI_THEME_IDS.map((themeId) =>
-  buildShikiTheme(themeId),
-);
+/** Build the one hand-authored bundled theme whose palette is authored directly, not via Shiki. */
+function buildMinimalTheme(): AppTheme {
+  const background = "#22212C";
+  const movedBg = readableTintedBackground("#CDC1FF", background, "#dddddd", 0.2);
+  return {
+    id: "minimal",
+    label: "Minimal",
+    appearance: "dark",
+    background,
+    panel: "#2a2838",
+    panelAlt: "#312f3e",
+    border: "#454057",
+    accent: "#CDC1FF",
+    accentMuted: "#3d3660",
+    text: "#dddddd",
+    muted: "#888888",
+    addedBg: "#1a3030",
+    removedBg: "#3a2230",
+    movedAddedBg: movedBg,
+    movedRemovedBg: movedBg,
+    contextBg: "#272535",
+    addedContentBg: "#1f3835",
+    removedContentBg: "#422835",
+    contextContentBg: "#2e2c3c",
+    addedSignColor: "#00ffaa",
+    removedSignColor: "#ed91b1",
+    lineNumberBg: "#1e1d28",
+    lineNumberFg: "#888888",
+    selectedHunk: "#454057",
+    badgeAdded: "#00ffaa",
+    badgeRemoved: "#ed91b1",
+    badgeNeutral: "#888888",
+    fileNew: "#00ffaa",
+    fileDeleted: "#ed91b1",
+    fileRenamed: "#d6c5a5",
+    fileModified: "#CDC1FF",
+    fileUntracked: "#aaaaaa",
+    noteBorder: "#CDC1FF",
+    noteBackground: "#2d2a3e",
+    noteTitleBackground: "#3a3552",
+    noteTitleText: "#e0d4ef",
+    // No Shiki base theme exists for this palette, so code highlighting falls back to
+    // Pierre's built-in dark theme while syntaxColors still tint non-Shiki highlighting.
+    syntaxColors: {
+      default: "#dddddd",
+      keyword: "#CDC1FF",
+      string: "#FFDCCC",
+      comment: "#888888",
+      number: "#d6c5a5",
+      function: "#CDC1FF",
+      property: "#dddddd",
+      type: "#CDC1FF",
+      punctuation: "#888888",
+    },
+  } satisfies AppTheme;
+}
+
+export const THEMES: AppTheme[] = [
+  ...BUNDLED_SHIKI_THEME_IDS.map((themeId) => buildShikiTheme(themeId)),
+  buildMinimalTheme(),
+];
 
 /** Return the built-in theme by id so config-defined themes can inherit from it. */
 function builtInThemeById(themeId: string | undefined) {
   const resolvedThemeId = resolveBundledShikiThemeId(themeId);
-  return THEMES.find((theme) => theme.id === resolvedThemeId);
+  // Hand-authored ids resolve to themselves; legacy aliases keep pointing at their replacement.
+  return THEMES.find((theme) => theme.id === resolvedThemeId || theme.id === themeId);
 }
 
 /** Return the explicit built-in fallback theme used across startup and missing ids. */
