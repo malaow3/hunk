@@ -69,7 +69,13 @@ async function main() {
     useAlternateScreen: true,
     exitOnCtrlC: true,
     openConsoleOnError: true,
-    onDestroy: () => controllingTerminal?.close(),
+    onDestroy: () => {
+      controllingTerminal?.close();
+      // OpenTUI intercepts Ctrl-C as a keystroke and calls destroy() directly,
+      // bypassing the app's quit path. Route through shutdown() so the process
+      // always exits instead of hanging after the TUI closes.
+      shutdown();
+    },
   });
 
   const root = createRoot(renderer);
