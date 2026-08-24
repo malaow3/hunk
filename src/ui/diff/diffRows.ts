@@ -196,6 +196,114 @@ function wordDiffHighlightBg(kind: SplitLineCell["kind"], theme: AppTheme) {
   return cached[kind];
 }
 
+// Maps every Pierre-theme hex color to its semantic role so that each AppTheme's syntaxColors
+// palette fully controls what renders, rather than Pierre's built-in Shiki palette bleeding through.
+// Kept in sync with Pierre's bundled pierre-dark / pierre-light token settings.
+const RESERVED_PIERRE_TOKEN_COLORS = {
+  dark: {
+    // keywords, control flow, storage (const, let, export, import, return, if, ...)
+    "#ff678d": "keyword",
+    // strings, symbols, string delimiters
+    "#5ecc71": "string",
+    // string and character escapes
+    "#61d5c0": "string",
+    // regular expressions
+    "#64d1db": "string",
+    // functions, methods, calls
+    "#9d6afb": "function",
+    // decorators (@Component, ...)
+    "#69b1ff": "function",
+    // variables, identifiers, object-literal keys
+    "#ffa359": "default",
+    // constants (UPPER_CASE, import aliases), namespaces, language variables (this, self)
+    "#ffab16": "default",
+    // function / variable parameters
+    "#a3a3a3": "default",
+    // python/rust magic variables, C/C++ function metadata
+    "#ff855e": "default",
+    // comments
+    "#737373": "comment",
+    // numeric literals, booleans, language constants (null, undefined)
+    "#68cdf2": "number",
+    // non-numeric constants, python named parameters
+    "#ffd452": "number",
+    // types, class names, interfaces
+    "#d568ea": "type",
+    // attribute names (HTML/JSX attributes, CSS class selectors)
+    "#60d199": "property",
+    // operators and punctuation
+    "#08c0ef": "punctuation",
+    "#636363": "punctuation",
+    // explicit base foreground on tokens without a specific rule
+    "#fafafa": "default",
+  },
+  light: {
+    // keywords, control flow, storage
+    "#d32a61": "keyword",
+    // strings, symbols, string delimiters
+    "#199f43": "string",
+    // string and character escapes
+    "#16a994": "string",
+    // regular expressions
+    "#17a5af": "string",
+    // functions, methods, calls
+    "#693acf": "function",
+    // decorators
+    "#1a85d4": "function",
+    // variables, identifiers, object-literal keys
+    "#d47628": "default",
+    // constants, namespaces, language variables
+    "#d5901c": "default",
+    // python/rust magic variables, C/C++ function metadata
+    "#d5512f": "default",
+    // comments
+    "#737373": "comment",
+    // numeric literals, booleans, language constants
+    "#1ca1c7": "number",
+    // non-numeric constants, python named parameters
+    "#d5a910": "number",
+    // types, class names, interfaces
+    "#a631be": "type",
+    // attribute names (HTML/JSX attributes, CSS class selectors)
+    "#18a46c": "property",
+    // operators, punctuation, and parameters share one hue on the light theme
+    "#08c0ef": "punctuation",
+    "#636363": "punctuation",
+  },
+} as const;
+
+// Remap Pierre token hues that collide with diff add/remove semantics into theme-safe syntax
+// colors. Cache the remap per theme because themes that share an appearance can still use
+// different syntax palettes.
+const normalizedColorCache = new Map<string, Map<string, string>>();
+
+/** Substitute one Pierre token hue with the theme's semantic syntax color when it is reserved. */
+function normalizeHighlightedColor(color: string | undefined, theme: AppTheme) {
+  if (!color) {
+    return color;
+  }
+
+  let cacheForTheme = normalizedColorCache.get(theme.id);
+  if (!cacheForTheme) {
+    cacheForTheme = new Map<string, string>();
+    normalizedColorCache.set(theme.id, cacheForTheme);
+  }
+
+  const cached = cacheForTheme.get(color);
+  if (cached) {
+    return cached;
+  }
+
+  const normalized = color.trim().toLowerCase();
+  const reserved =
+    RESERVED_PIERRE_TOKEN_COLORS[theme.appearance][
+      normalized as keyof (typeof RESERVED_PIERRE_TOKEN_COLORS)[typeof theme.appearance]
+    ];
+  const resolvedColor = reserved ? theme.syntaxColors[reserved] : color;
+  cacheForTheme.set(color, resolvedColor);
+  return resolvedColor;
+}
+
 /** Append a span while coalescing adjacent runs with identical colors. */
 function mergeSpan(target: RenderSpan[], next: RenderSpan) {
   if (next.text.length === 0) {
@@ -222,9 +330,10 @@ function flattenHighlightedLine(
     return [];
   }
 
-  // The highlighted HAST node is already unique to the content-addressed Shiki theme. Only
-  // post-highlight choices belong in the inner key; syntax identity comes from the WeakMap key.
-  const cacheKey = `${theme.appearance}:${emphasisBg}:${tabWidth}`;
+  // The highlighted HAST node is already unique to the content-addressed Shiki theme, but the
+  // Pierre color remap makes spans depend on the full theme palette, so the inner key includes
+  // the theme id; syntax identity comes from the WeakMap key.
+  const cacheKey = `${theme.id}:${emphasisBg}:${tabWidth}`;
   const cachedByTheme = flattenedHighlightedLineCache.get(node);
   const cached = cachedByTheme?.get(cacheKey);
   if (cached) {
@@ -241,7 +350,7 @@ function flattenHighlightedLine(
     const text = tabify(run.text, tabWidth, codeColumn);
     mergeSpan(spans, {
       text,
-      fg: run.fg,
+      fg: normalizeHighlightedColor(run.fg, theme),
       bg: run.wordDiff ? emphasisBg : undefined,
     });
     codeColumn += measureTextWidth(text);
@@ -262,6 +371,7 @@ function flattenCompactHighlightedLine(
   runs: CompactHighlightRun[],
   emphasisBg: string,
   tabWidth: number,
+  theme: AppTheme,
 ) {
   const source = cleanLastNewline(rawLine ?? "");
   const spans: RenderSpan[] = [];
@@ -276,7 +386,11 @@ function flattenCompactHighlightedLine(
 
   for (const run of runs) {
     appendText(source.slice(sourceColumn, run.start));
-    appendText(source.slice(run.start, run.end), run.fg, run.wordDiff ? emphasisBg : undefined);
+    appendText(
+      source.slice(run.start, run.end),
+      normalizeHighlightedColor(run.fg, theme),
+      run.wordDiff ? emphasisBg : undefined,
+    );
     sourceColumn = run.end;
   }
   appendText(source.slice(sourceColumn));
@@ -350,6 +464,7 @@ function makeSplitCell(
       compactRuns,
       wordDiffHighlightBg(kind, theme),
       tabWidth,
+      theme,
     );
   } else {
     spans = [];
@@ -397,6 +512,7 @@ function makeStackCell(
       compactRuns,
       wordDiffHighlightBg(kind, theme),
       tabWidth,
+      theme,
     );
   } else {
     spans = [];

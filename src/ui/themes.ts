@@ -276,7 +276,8 @@ function buildMinimalTheme(): AppTheme {
     noteTitleBackground: "#3a3552",
     noteTitleText: "#e0d4ef",
     // No Shiki base theme exists for this palette, so code highlighting falls back to
-    // Pierre's built-in dark theme while syntaxColors still tint non-Shiki highlighting.
+    // Pierre's built-in dark theme; diffRows maps Pierre's token hues onto this palette so
+    // the authored colors still control what renders.
     syntaxColors: {
       default: "#dddddd",
       keyword: "#CDC1FF",

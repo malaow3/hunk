@@ -229,6 +229,33 @@ function createEmptyLineDiffFile(): DiffFile {
 }
 
 describe("Pierre diff rows", () => {
+  test("maps reserved Pierre token hues onto the theme's syntax palette", async () => {
+    const file = createDiffFile();
+    const theme = resolveTheme("minimal", null);
+    const highlighted = await loadHighlightedDiff(file, theme);
+    const rows = buildSplitRows(file, highlighted, theme);
+
+    const spans = rows
+      .filter((row) => row.type === "split-line")
+      .flatMap((row) => [...row.left.spans, ...row.right.spans]);
+    const keywordSpan = spans.find((span) => span.text.includes("export"));
+
+    // Pierre highlights with its stock dark palette; the renderer substitutes each reserved hue
+    // with the theme's semantic color so hand-authored palettes control what renders.
+    expect(keywordSpan?.fg).toBe(theme.syntaxColors.keyword);
+
+    // Every colored span must resolve into the theme's authored palette — a Pierre stock hue
+    // bleeding through (e.g. an unmapped identifier orange) fails here.
+    const palette = new Set(
+      Object.values(theme.syntaxColors).map((color) => color.toLowerCase()),
+    );
+    for (const span of spans) {
+      if (typeof span.fg === "string") {
+        expect(palette.has(span.fg.toLowerCase())).toBe(true);
+      }
+    }
+  });
+
   test("builds split rows with Pierre-highlighted emphasis spans", async () => {
     const file = createDiffFile();
     const theme = resolveTheme("github-dark-default", null);

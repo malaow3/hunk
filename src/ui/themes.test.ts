@@ -70,11 +70,13 @@ describe("themes", () => {
       expect(theme.syntaxColors.default).toBeTruthy();
     }
 
-    // The hand-authored theme labels itself and falls back to Pierre's dark syntax theme.
+    // The hand-authored theme labels itself and falls back to Pierre's dark syntax theme; its
+    // authored token palette reaches the renderer through the Pierre color remap in diffRows.
     const minimal = resolveTheme("minimal", null);
     expect(minimal.label).toBe("Minimal");
     expect(minimal.appearance).toBe("dark");
-    expect(minimal.syntaxColors.default).toBeTruthy();
+    expect(minimal.syntaxTheme).toBeUndefined();
+    expect(minimal.syntaxColors.keyword).toBe("#CDC1FF");
   });
 
   test("derives GitHub default surfaces from bundled theme metadata", () => {
