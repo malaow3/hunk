@@ -1,6 +1,6 @@
 import { afterEach, describe, expect, setDefaultTimeout, test } from "bun:test";
 import stringWidth from "string-width";
-import { createPtyHarness, dragMouse, rightmostColumnOf } from "./harness";
+import { createPtyHarness, dragMouse, rightmostColumnOf, sleep } from "./harness";
 
 const harness = createPtyHarness();
 
@@ -10,6 +10,31 @@ setDefaultTimeout(20_000);
 afterEach(() => {
   harness.cleanup();
 });
+
+const horizontalRepeatBatchSize = 8;
+
+/** Build one bounded burst matching repeated horizontal input from a held key. */
+function horizontalKeyRepeat(key: "left" | "right") {
+  return Array.from({ length: horizontalRepeatBatchSize }, () => key);
+}
+
+/** Locate the left pane divider from a rendered terminal frame. */
+function sidebarDividerColumn(frame: string) {
+  const columns = frame
+    .split("\n")
+    .map((line) => line.indexOf("│"))
+    .filter((column) => column >= 0);
+  return columns.length === 0 ? -1 : Math.min(...columns);
+}
+
+/** Return the rendered columns owned by the left sidebar. */
+function sidebarFrame(frame: string) {
+  const divider = sidebarDividerColumn(frame);
+  return frame
+    .split("\n")
+    .map((line) => line.slice(0, divider))
+    .join("\n");
+}
 
 describe("PTY layout", () => {
   test("the first frame fills the viewport bottom with the next file section", async () => {
@@ -43,10 +68,159 @@ describe("PTY layout", () => {
     }
   });
 
+  test("the first nowrap frame fills a tall viewport past the first-file overscan neighbor", async () => {
+    // File windowing with a still-unmeasured (0) viewport only mounts the leading file plus one
+    // overscan neighbor. A tall first paint must use the estimated height so later short files
+    // appear without any scroll input.
+    const fixture = harness.createManyShortFileRepoFixture();
+    const session = await harness.launchHunk({
+      args: ["diff", "--mode", "unified", "--no-sidebar"],
+      cwd: fixture.dir,
+      cols: 100,
+      rows: 40,
+    });
+
+    try {
+      await session.waitForText(/View\s+Navigate\s+Agent\s+Help/, {
+        timeout: 15_000,
+      });
+
+      const firstFrame = await harness.waitForSnapshot(
+        session,
+        (text) => text.includes("short-3.ts") && text.includes("short3 = 13"),
+        8_000,
+      );
+
+      expect(firstFrame).toContain("short-3.ts");
+      expect(firstFrame).toContain("short3 = 13");
+    } finally {
+      session.close();
+    }
+  });
+
+  test("a review with many mounted files does not print a max-listener warning", async () => {
+    const fixture = harness.createManyShortFileRepoFixture(14);
+    const session = await harness.launchHunk({
+      args: ["diff", "--mode", "unified", "--no-sidebar"],
+      cwd: fixture.dir,
+      cols: 100,
+      rows: 120,
+    });
+    let output = "";
+    const unsubscribe = session.subscribe((data) => {
+      output += data;
+    });
+
+    try {
+      await harness.waitForSnapshot(session, (text) => text.includes("short-13.ts"), 15_000);
+      session.resize({ cols: 90, rows: 120 });
+      await harness.waitForSnapshot(session, (text) => text.includes("short-13.ts"), 5_000);
+      await sleep(300);
+
+      expect(output).toContain("short-0.ts");
+      expect(output).not.toContain("MaxListenersExceededWarning");
+    } finally {
+      unsubscribe();
+      session.close();
+    }
+  });
+
+  test("the deprecated stack CLI value renders the canonical unified layout", async () => {
+    const fixture = harness.createTwoFileRepoFixture();
+    const session = await harness.launchHunk({
+      args: ["diff", "--mode", "stack", "--no-sidebar"],
+      cwd: fixture.dir,
+      cols: 100,
+      rows: 24,
+    });
+
+    try {
+      const snapshot = await harness.waitForSnapshot(
+        session,
+        (text) => text.includes("alpha.ts") && text.includes("1   -  export const alpha = 1;"),
+        8_000,
+      );
+
+      expect(snapshot).not.toMatch(/▌.*▌/);
+      expect(snapshot).toContain("1   -  export const alpha = 1;");
+    } finally {
+      session.close();
+    }
+  });
+
+  test("a larger file gap inserts blank rows before the next file header", async () => {
+    const fixture = harness.createTwoFileRepoFixture();
+    const session = await harness.launchHunk({
+      args: ["diff", "--mode", "unified", "--no-sidebar", "--file-gap", "3"],
+      cwd: fixture.dir,
+      cols: 100,
+      rows: 24,
+    });
+
+    try {
+      await session.waitForText(/View\s+Navigate\s+Agent\s+Help/, {
+        timeout: 15_000,
+      });
+      const snapshot = await harness.waitForSnapshot(
+        session,
+        (text) => text.includes("alpha.ts") && text.includes("beta.ts"),
+        8_000,
+      );
+      const lines = snapshot.split("\n");
+      const betaIndex = lines.findIndex((line) => line.includes("beta.ts"));
+      expect(betaIndex).toBeGreaterThan(2);
+      const preceding = lines.slice(betaIndex - 3, betaIndex);
+      expect(preceding).toHaveLength(3);
+      expect(preceding[0]?.trim()).toBe("");
+      expect(preceding[1]?.trim()).toBe("");
+      expect(preceding[2]).toContain("─");
+    } finally {
+      session.close();
+    }
+  });
+
+  test("a hunk gap inserts blank rows before the next hunk header", async () => {
+    const fixture = harness.createMultiHunkFilePair();
+    const session = await harness.launchHunk({
+      args: [
+        "diff",
+        "--files",
+        fixture.before,
+        fixture.after,
+        "--mode",
+        "unified",
+        "--no-sidebar",
+        "--hunk-gap",
+        "2",
+      ],
+      cols: 100,
+      rows: 32,
+    });
+
+    try {
+      await session.waitForText(/View\s+Navigate\s+Agent\s+Help/, {
+        timeout: 15_000,
+      });
+      const snapshot = await harness.waitForSnapshot(
+        session,
+        (text) => (text.match(/@@/g) ?? []).length >= 2,
+        8_000,
+      );
+      const lines = snapshot.split("\n");
+      const headerIndexes = lines.flatMap((line, index) => (line.includes("@@") ? [index] : []));
+      expect(headerIndexes.length).toBeGreaterThanOrEqual(2);
+      const secondHeader = headerIndexes[1]!;
+      expect(lines[secondHeader - 2]?.trim()).toBe("");
+      expect(lines[secondHeader - 1]?.trim()).toBe("");
+    } finally {
+      session.close();
+    }
+  });
+
   test("split rows keep the center separator aligned after wide characters", async () => {
     const fixture = harness.createWideCharacterFilePair();
     const session = await harness.launchHunk({
-      args: ["diff", fixture.before, fixture.after, "--mode", "split"],
+      args: ["diff", "--files", fixture.before, fixture.after, "--mode", "split"],
       cols: 140,
       rows: 16,
     });
@@ -109,7 +283,7 @@ describe("PTY layout", () => {
   test("the CLI tab width reaches interactive app rendering", async () => {
     const fixture = harness.createTabbedFilePair();
     const session = await harness.launchHunk({
-      args: ["diff", fixture.before, fixture.after, "--mode", "stack", "-x8"],
+      args: ["diff", "--files", fixture.before, fixture.after, "--mode", "unified", "-x8"],
       cols: 100,
       rows: 12,
     });
@@ -134,7 +308,7 @@ describe("PTY layout", () => {
   test("real PTY sessions can toggle wrapped lines on and off", async () => {
     const fixture = harness.createLongWrapFilePair();
     const session = await harness.launchHunk({
-      args: ["diff", fixture.before, fixture.after, "--mode", "split"],
+      args: ["diff", "--files", fixture.before, fixture.after, "--mode", "split"],
       cols: 102,
       rows: 20,
     });
@@ -149,18 +323,18 @@ describe("PTY layout", () => {
       expect(initial).toContain("this is a very long");
       expect(initial).not.toContain("ge';");
 
-      await session.press("w");
-      const wrapped = await harness.waitForSnapshot(
+      const wrapped = await harness.pressAndWaitForSnapshot(
         session,
+        "w",
         (text) => text.includes("ge';"),
         5_000,
       );
 
       expect(wrapped).toContain("ge';");
 
-      await session.press("w");
-      const unwrapped = await harness.waitForSnapshot(
+      const unwrapped = await harness.pressAndWaitForSnapshot(
         session,
+        "w",
         (text) => !text.includes("ge';"),
         5_000,
       );
@@ -174,7 +348,7 @@ describe("PTY layout", () => {
   test("real PTY sessions can expand and collapse unchanged context", async () => {
     const fixture = harness.createExpandableContextFilePair();
     const session = await harness.launchHunk({
-      args: ["diff", fixture.before, fixture.after, "--mode", "split"],
+      args: ["diff", "--files", fixture.before, fixture.after, "--mode", "split"],
       cols: 140,
       rows: 16,
     });
@@ -187,18 +361,18 @@ describe("PTY layout", () => {
       expect(initial).toContain("▾ 1 unchanged line");
       expect(initial).not.toContain("hiddenLine01");
 
-      await session.press("z");
-      const expanded = await harness.waitForSnapshot(
+      const expanded = await harness.pressAndWaitForSnapshot(
         session,
+        "z",
         (text) => text.includes("Hide 1 unchanged line") && text.includes("hiddenLine01"),
         5_000,
       );
 
       expect(expanded).toContain("hiddenLine01");
 
-      await session.press("z");
-      const collapsed = await harness.waitForSnapshot(
+      const collapsed = await harness.pressAndWaitForSnapshot(
         session,
+        "z",
         (text) => text.includes("▾ 1 unchanged line") && !text.includes("hiddenLine01"),
         5_000,
       );
@@ -235,7 +409,7 @@ describe("PTY layout", () => {
   });
 
   test("auto layout responds to live terminal resize in a real PTY", async () => {
-    const fixture = harness.createTwoFileRepoFixture();
+    const fixture = harness.createNestedSidebarRepoFixture();
     const session = await harness.launchHunk({
       args: ["diff", "--mode", "auto"],
       cwd: fixture.dir,
@@ -249,26 +423,41 @@ describe("PTY layout", () => {
       });
 
       expect(harness.countMatches(wide, /alpha\.ts/g)).toBeGreaterThanOrEqual(2);
+      expect(sidebarFrame(wide)).not.toContain("src/ui/");
       expect(wide).toMatch(/▌.*▌/);
 
-      session.resize({ cols: 150, rows: 24 });
-      const tight = await harness.waitForSnapshot(session, (text) => !/▌.*▌/.test(text), 5_000);
-
-      expect(harness.countMatches(tight, /alpha\.ts/g)).toBeLessThan(
-        harness.countMatches(wide, /alpha\.ts/g),
+      session.resize({ cols: 180, rows: 24 });
+      const medium = await harness.waitForSnapshot(
+        session,
+        (text) => sidebarFrame(text).includes("src/ui/"),
+        5_000,
       );
+      expect(harness.countMatches(medium, /alpha\.ts/g)).toBeGreaterThanOrEqual(2);
+      expect(medium).toMatch(/▌.*▌/);
+
+      session.resize({ cols: 150, rows: 24 });
+      const narrow = await harness.waitForSnapshot(
+        session,
+        (text) => harness.countMatches(text, /alpha\.ts/g) === 1 && /▌.*▌/.test(text),
+        5_000,
+      );
+      expect(narrow).toMatch(/▌.*▌/);
+
+      session.resize({ cols: 110, rows: 24 });
+      const tight = await harness.waitForSnapshot(session, (text) => !/▌.*▌/.test(text), 5_000);
+      expect(harness.countMatches(tight, /alpha\.ts/g)).toBe(1);
       expect(tight).not.toMatch(/▌.*▌/);
     } finally {
       session.close();
     }
   });
 
-  test("--sidebar shows the sidebar below the viewport width that would reveal it", async () => {
+  test("--sidebar shows the sidebar below the automatic sidebar cutoff", async () => {
     const fixture = harness.createTwoFileRepoFixture();
     const session = await harness.launchHunk({
       args: ["diff", "--mode", "split", "--sidebar"],
       cwd: fixture.dir,
-      cols: 180,
+      cols: 150,
       rows: 18,
     });
 
@@ -326,10 +515,12 @@ describe("PTY layout", () => {
         timeout: 15_000,
       });
       const initialMainColumn = rightmostColumnOf(initial, "alpha.ts");
+      const initialDividerColumn = sidebarDividerColumn(initial);
 
-      expect(initialMainColumn).toBeGreaterThan(34);
+      expect(initialDividerColumn).toBeGreaterThan(0);
+      expect(initialMainColumn).toBeGreaterThan(initialDividerColumn);
 
-      await dragMouse(session, 34, 6, 54, 6);
+      await dragMouse(session, initialDividerColumn - 2, 6, initialDividerColumn + 18, 6);
       const resized = await harness.waitForSnapshot(
         session,
         (text) => rightmostColumnOf(text, "alpha.ts") >= initialMainColumn + 3,
@@ -338,6 +529,116 @@ describe("PTY layout", () => {
 
       expect(rightmostColumnOf(resized, "alpha.ts")).toBeGreaterThan(initialMainColumn);
       expect(resized).toContain("beta.ts");
+    } finally {
+      session.close();
+    }
+  });
+
+  test("retains a sidebar drag when its first motion switches the file projection", async () => {
+    const fixture = harness.createNestedSidebarRepoFixture();
+    const session = await harness.launchHunk({
+      args: ["diff", "--mode", "split"],
+      cwd: fixture.dir,
+      cols: 220,
+      rows: 18,
+    });
+
+    try {
+      const initial = await session.waitForText(/View\s+Navigate\s+Agent\s+Help/, {
+        timeout: 15_000,
+      });
+      const initialMainColumn = rightmostColumnOf(initial, "alpha.ts");
+      const initialDividerColumn = sidebarDividerColumn(initial);
+      const pressColumn = initialDividerColumn - 2;
+      const projectionSwitchColumn = initialDividerColumn - 4;
+
+      // Press the left edge of the five-cell hit target. The first motion crosses the tree
+      // threshold and switches that row out before the second motion arrives.
+      session.writeRaw(`\x1b[<0;${pressColumn + 1};7M`);
+      await sleep(20);
+      session.writeRaw(`\x1b[<32;${projectionSwitchColumn + 1};7M`);
+      await harness.waitForSnapshot(
+        session,
+        (text) =>
+          text
+            .split("\n")
+            .map((line) => line.slice(0, initialDividerColumn - 2))
+            .join("\n")
+            .includes("src/ui/"),
+        5_000,
+      );
+      const finalColumn = initialDividerColumn - 16;
+      session.writeRaw(`\x1b[<32;${finalColumn + 1};7M`);
+      await sleep(20);
+      session.writeRaw(`\x1b[<0;${finalColumn + 1};7m`);
+      await session.waitIdle();
+
+      const resized = await harness.waitForSnapshot(
+        session,
+        (text) => rightmostColumnOf(text, "alpha.ts") <= initialMainColumn - 8,
+        5_000,
+      );
+      expect(rightmostColumnOf(resized, "alpha.ts")).toBeLessThanOrEqual(initialMainColumn - 8);
+    } finally {
+      session.close();
+    }
+  });
+
+  test("dragging the sidebar through 31 content columns switches to compact paths", async () => {
+    const fixture = harness.createNestedSidebarRepoFixture();
+    const session = await harness.launchHunk({
+      args: ["diff", "--mode", "split"],
+      cwd: fixture.dir,
+      cols: 220,
+      rows: 18,
+    });
+
+    try {
+      const initial = await session.waitForText(/View\s+Navigate\s+Agent\s+Help/, {
+        timeout: 15_000,
+      });
+      const initialDividerColumn = sidebarDividerColumn(initial);
+      const compactDividerColumn = initialDividerColumn - 2;
+      const initialSidebar = initial
+        .split("\n")
+        .map((line) => line.slice(0, initialDividerColumn))
+        .join("\n");
+
+      expect(initialSidebar).not.toContain("src/ui/");
+      expect(initialSidebar).toContain("⌄ src/");
+      expect(initialSidebar).toContain("⌄ ui/");
+      expect(
+        initialSidebar
+          .split("\n")
+          .find((line) => line.includes("src/"))
+          ?.indexOf("src/"),
+      ).toBe(4);
+
+      await dragMouse(session, initialDividerColumn - 2, 6, initialDividerColumn - 4, 6);
+      const resized = await harness.waitForSnapshot(
+        session,
+        (text) =>
+          text
+            .split("\n")
+            .map((line) => line.slice(0, compactDividerColumn))
+            .join("\n")
+            .includes("src/ui/"),
+        5_000,
+      );
+      const resizedSidebar = resized
+        .split("\n")
+        .map((line) => line.slice(0, compactDividerColumn))
+        .join("\n");
+
+      expect(resizedSidebar).toContain("src/ui/");
+      expect(
+        resizedSidebar
+          .split("\n")
+          .find((line) => line.includes("src/ui/"))
+          ?.indexOf("src/ui/"),
+      ).toBe(2);
+      expect(resizedSidebar).toContain("alpha.ts");
+      expect(resizedSidebar).toContain("beta.ts");
     } finally {
       session.close();
     }
@@ -376,10 +677,10 @@ describe("PTY layout", () => {
     }
   });
 
-  test("explicit stack mode stays stacked after a live resize", async () => {
+  test("explicit unified mode stays unified after a live resize", async () => {
     const fixture = harness.createTwoFileRepoFixture();
     const session = await harness.launchHunk({
-      args: ["diff", "--mode", "stack"],
+      args: ["diff", "--mode", "unified"],
       cwd: fixture.dir,
       cols: 140,
       rows: 24,
@@ -406,10 +707,10 @@ describe("PTY layout", () => {
     }
   });
 
-  test("direct layout hotkeys can switch between split, stack, and auto in a real PTY", async () => {
+  test("direct layout hotkeys can switch between split, unified, and auto in a real PTY", async () => {
     const fixture = harness.createTwoFileRepoFixture();
     const session = await harness.launchHunk({
-      args: ["diff", "--mode", "stack"],
+      args: ["diff", "--mode", "unified"],
       cwd: fixture.dir,
       cols: 220,
       rows: 24,
@@ -423,28 +724,28 @@ describe("PTY layout", () => {
       expect(initial).not.toMatch(/▌.*▌/);
       expect(initial).toContain("1   -  export const alpha = 1;");
 
-      await session.press("1");
-      const split = await harness.waitForSnapshot(
+      const split = await harness.pressAndWaitForSnapshot(
         session,
+        "2",
         (text) => /▌.*▌/.test(text) && harness.countMatches(text, /alpha\.ts/g) >= 2,
         5_000,
       );
 
       expect(split).toMatch(/▌.*▌/);
 
-      await session.press("2");
-      const stack = await harness.waitForSnapshot(
+      const unified = await harness.pressAndWaitForSnapshot(
         session,
+        "1",
         (text) => !/▌.*▌/.test(text) && text.includes("1   -  export const alpha = 1;"),
         5_000,
       );
 
-      expect(stack).not.toMatch(/▌.*▌/);
-      expect(stack).toContain("1   -  export const alpha = 1;");
+      expect(unified).not.toMatch(/▌.*▌/);
+      expect(unified).toContain("1   -  export const alpha = 1;");
 
-      await session.press("0");
-      const auto = await harness.waitForSnapshot(
+      const auto = await harness.pressAndWaitForSnapshot(
         session,
+        "0",
         (text) => /▌.*▌/.test(text) && harness.countMatches(text, /alpha\.ts/g) >= 2,
         5_000,
       );
@@ -458,7 +759,7 @@ describe("PTY layout", () => {
   test("layout hotkeys preserve the current review position in a real PTY", async () => {
     const fixture = harness.createScrollableFilePair();
     const session = await harness.launchHunk({
-      args: ["diff", fixture.before, fixture.after, "--mode", "split"],
+      args: ["diff", "--files", fixture.before, fixture.after, "--mode", "split"],
       cols: 220,
       rows: 12,
     });
@@ -487,18 +788,18 @@ describe("PTY layout", () => {
       expect(anchored).not.toContain("line01 = 101");
       expect(anchoredLineNumber).toBeDefined();
 
-      await session.press("2");
-      const stacked = await harness.waitForSnapshot(
+      const unified = await harness.pressAndWaitForSnapshot(
         session,
+        "1",
         (text) => !/▌.*▌/.test(text) && text.includes(`line${anchoredLineNumber} =`),
         5_000,
       );
 
-      expect(stacked).toContain(`line${anchoredLineNumber} =`);
+      expect(unified).toContain(`line${anchoredLineNumber} =`);
 
-      await session.press("1");
-      const split = await harness.waitForSnapshot(
+      const split = await harness.pressAndWaitForSnapshot(
         session,
+        "2",
         (text) => /▌.*▌/.test(text) && text.includes(`line${anchoredLineNumber} =`),
         5_000,
       );
@@ -512,7 +813,7 @@ describe("PTY layout", () => {
   test("arrow-key horizontal scrolling reveals hidden code columns in a real PTY", async () => {
     const fixture = harness.createLongWrapFilePair();
     const session = await harness.launchHunk({
-      args: ["diff", fixture.before, fixture.after, "--mode", "split"],
+      args: ["diff", "--files", fixture.before, fixture.after, "--mode", "split"],
       cols: 102,
       rows: 20,
     });
@@ -526,10 +827,9 @@ describe("PTY layout", () => {
       expect(initial).not.toContain("ge';");
 
       let shifted = initial;
-      for (let index = 0; index < 96; index += 1) {
-        await session.press("right");
-        // press() already waits for idle, so read the settled frame immediately rather than
-        // paying another render round-trip per column; the loop retries if a frame lags.
+      for (let index = 0; index < 96; index += horizontalRepeatBatchSize) {
+        await session.press(horizontalKeyRepeat("right"));
+        // Held keys arrive in bursts. Settle each bounded burst and retry if its frame lags.
         shifted = await session.text({ immediate: true });
         if (shifted.includes("ge';")) {
           break;
@@ -540,8 +840,8 @@ describe("PTY layout", () => {
       expect(shifted).not.toContain("this is a very long");
 
       let restored = shifted;
-      for (let index = 0; index < 96; index += 1) {
-        await session.press("left");
+      for (let index = 0; index < 96; index += horizontalRepeatBatchSize) {
+        await session.press(horizontalKeyRepeat("left"));
         restored = await session.text({ immediate: true });
         if (restored.includes("this is a very long") && !restored.includes("ge';")) {
           break;
@@ -555,10 +855,10 @@ describe("PTY layout", () => {
     }
   });
 
-  test("wrap toggles reset horizontal code scrolling in a real PTY", async () => {
+  test("shifted mouse-wheel input scrolls code horizontally in a real PTY", async () => {
     const fixture = harness.createLongWrapFilePair();
     const session = await harness.launchHunk({
-      args: ["diff", fixture.before, fixture.after, "--mode", "split"],
+      args: ["diff", "--files", fixture.before, fixture.after, "--mode", "split"],
       cols: 102,
       rows: 20,
     });
@@ -572,9 +872,43 @@ describe("PTY layout", () => {
       expect(initial).not.toContain("ge';");
 
       let shifted = initial;
-      for (let index = 0; index < 96; index += 1) {
-        await session.press("right");
-        // press() already waits for idle; read immediately to avoid a redundant settle per column.
+      for (let index = 0; index < 96; index += horizontalRepeatBatchSize) {
+        // SGR button 69 is a wheel-down event with the Shift modifier. Real wheel input arrives
+        // in bursts, so settle the same bounded batch used for held horizontal arrow keys.
+        session.writeRaw("\x1b[<69;61;11M".repeat(horizontalRepeatBatchSize));
+        await session.waitIdle();
+        shifted = await session.text({ immediate: true });
+        if (shifted.includes("ge';")) {
+          break;
+        }
+      }
+
+      expect(shifted).toContain("ge';");
+      expect(shifted).not.toContain("this is a very long");
+    } finally {
+      session.close();
+    }
+  });
+
+  test("wrap toggles reset horizontal code scrolling in a real PTY", async () => {
+    const fixture = harness.createLongWrapFilePair();
+    const session = await harness.launchHunk({
+      args: ["diff", "--files", fixture.before, fixture.after, "--mode", "split"],
+      cols: 102,
+      rows: 20,
+    });
+
+    try {
+      const initial = await session.waitForText(/View\s+Navigate\s+Agent\s+Help/, {
+        timeout: 15_000,
+      });
+
+      expect(initial).toContain("this is a very long");
+      expect(initial).not.toContain("ge';");
+
+      let shifted = initial;
+      for (let index = 0; index < 96; index += horizontalRepeatBatchSize) {
+        await session.press(horizontalKeyRepeat("right"));
         shifted = await session.text({ immediate: true });
         if (shifted.includes("ge';")) {
           break;
@@ -595,9 +929,9 @@ describe("PTY layout", () => {
       expect(wrapped).toContain("wrapped line");
       expect(wrapped).toContain("ge';");
 
-      await session.press("w");
-      const reset = await harness.waitForSnapshot(
+      const reset = await harness.pressAndWaitForSnapshot(
         session,
+        "w",
         (text) => text.includes("this is a very long") && !text.includes("ge';"),
         5_000,
       );

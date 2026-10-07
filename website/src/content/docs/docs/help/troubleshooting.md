@@ -31,14 +31,14 @@ Use the repository root that the live review loaded. If an agent sandbox blocks 
 
 ## Theme detection looks wrong
 
-Some terminals do not answer background-color queries. `theme = "auto"` then falls back to `github-dark-default`; choose a theme explicitly if needed. Disable transparency if terminal compositing makes contrast unpredictable.
+Some terminals do not answer color queries. The default `terminal` theme then falls back to a standard xterm-style palette and `theme = "auto"` falls back to `github-dark-default`; choose a theme explicitly if needed. Disable transparency if terminal compositing makes contrast unpredictable.
 
 ## Layout or text is hard to read
 
-Try stack mode and wrapping in a narrow terminal:
+Try unified mode and wrapping in a narrow terminal:
 
 ```bash
-hunk diff --mode stack --wrap
+hunk diff --mode unified --wrap
 ```
 
 Press `?` for shortcuts, `t` for themes, and `l` for line numbers. See [terminal compatibility](/docs/help/compatibility/) for mouse, color, and clipboard limits.

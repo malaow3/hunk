@@ -2,7 +2,7 @@ import { afterEach, describe, expect, setDefaultTimeout, test } from "bun:test";
 import { mkdtempSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import { createPtyHarness, sleep } from "./harness";
+import { createPtyHarness } from "./harness";
 
 const harness = createPtyHarness();
 
@@ -13,13 +13,13 @@ afterEach(() => {
   harness.cleanup();
 });
 
-/** Create a contiguous added TypeScript file large enough to use the highlight worker. */
-function createLargeHighlightTestFiles() {
+/** Create contiguous added TypeScript lines for main-thread or worker highlighting. */
+function createHighlightTestFiles(lineCount: number) {
   const dir = mkdtempSync(join(tmpdir(), "hunk-highlight-worker-"));
   const before = join(dir, "before.ts");
   const after = join(dir, "after.ts");
   const contents = Array.from(
-    { length: 8_000 },
+    { length: lineCount },
     (_, index) => `export const workerLine${index} = ${index};`,
   ).join("\n");
   writeFileSync(before, "");
@@ -27,11 +27,58 @@ function createLargeHighlightTestFiles() {
   return { after, before, dir };
 }
 
+/** Return generated worker-line indexes visible in one PTY snapshot. */
+function visibleWorkerLineIndexes(snapshot: string) {
+  return Array.from(snapshot.matchAll(/workerLine(\d+)/g), (match) => Number(match[1]));
+}
+
 describe("PTY syntax highlighting", () => {
+  test("highlights a small diff using the main-thread WASM engine", async () => {
+    const fixture = createHighlightTestFiles(2);
+    try {
+      const session = await harness.launchHunk({
+        args: [
+          "diff",
+          "--theme",
+          "github-dark-default",
+          "--files",
+          fixture.before,
+          fixture.after,
+          "--mode",
+          "unified",
+        ],
+        cwd: fixture.dir,
+        cols: 100,
+        rows: 24,
+      });
+      await session.waitForText("export const workerLine0 = 0;");
+      let keywords = "";
+      for (let iteration = 0; iteration < 200; iteration += 1) {
+        await session.waitIdle({ timeout: 50 });
+        keywords = await session.text({ immediate: true, only: { foreground: "#ff7b72" } });
+        if (keywords.includes("export")) break;
+      }
+      expect(keywords).toContain("export");
+      session.close();
+    } finally {
+      rmSync(fixture.dir, { recursive: true, force: true });
+    }
+  });
+
   test("keeps key input responsive while a large added file highlights", async () => {
-    const fixture = createLargeHighlightTestFiles();
+    const fixture = createHighlightTestFiles(8_000);
     const session = await harness.launchHunk({
-      args: ["diff", fixture.before, fixture.after, "--fast", "--mode", "stack"],
+      args: [
+        "diff",
+        "--theme",
+        "github-dark-default",
+        "--files",
+        fixture.before,
+        fixture.after,
+        "--fast",
+        "--mode",
+        "unified",
+      ],
       cwd: fixture.dir,
       cols: 120,
       rows: 24,
@@ -39,12 +86,22 @@ describe("PTY syntax highlighting", () => {
 
     try {
       await session.waitForText(/View\s+Navigate\s+Agent\s+Help/, { timeout: 15_000 });
-      // Effects schedule highlighting after the first plain-text paint. Give that queue a turn,
-      // then assert the PTY can still deliver navigation while the worker is busy.
-      await sleep(25);
-      const started = performance.now();
-      await session.press("down");
-      expect(performance.now() - started).toBeLessThan(500);
+      const initial = await session.waitForText(/export const workerLine\d+ = \d+;/, {
+        timeout: 15_000,
+      });
+      const lastInitialLineIndex = Math.max(...visibleWorkerLineIndexes(initial));
+      expect(lastInitialLineIndex).toBeGreaterThanOrEqual(0);
+
+      // Effects schedule highlighting after the first plain-text paint. Inject input as soon as
+      // source rows make that paint observable, then require Hunk to process the navigation.
+      // Tuistory's press() waits up to 500ms for idleness, so observe the viewport instead.
+      session.sendKey("pagedown");
+      await harness.waitForSnapshot(
+        session,
+        (snapshot) =>
+          visibleWorkerLineIndexes(snapshot).some((index) => index > lastInitialLineIndex),
+        1_000,
+      );
 
       let colored = "";
       for (let iteration = 0; iteration < 200; iteration += 1) {
@@ -64,7 +121,7 @@ describe("PTY syntax highlighting", () => {
   test("keeps code after a hidden Elixir heredoc opener out of the string token state", async () => {
     const fixture = harness.createElixirHeredocRepoFixture();
     const session = await harness.launchHunk({
-      args: ["diff", "--mode", "stack"],
+      args: ["diff", "--theme", "github-dark-default", "--mode", "unified"],
       cwd: fixture.dir,
       cols: 100,
       rows: 24,

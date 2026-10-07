@@ -7,67 +7,68 @@ Hunk is a review-first terminal diff viewer for agent-authored changesets, built
 [![CI status](https://img.shields.io/github/actions/workflow/status/modem-dev/hunk/ci.yml?branch=main&style=for-the-badge&label=CI)](https://github.com/modem-dev/hunk/actions/workflows/ci.yml?branch=main)
 [![Latest release](https://img.shields.io/github/v/release/modem-dev/hunk?style=for-the-badge)](https://github.com/modem-dev/hunk/releases)
 [![MIT License](https://img.shields.io/badge/License-MIT-blue.svg?style=for-the-badge)](LICENSE)
+[![Join the Discord community](https://img.shields.io/badge/Discord-Join%20community-5865F2?style=for-the-badge&logo=discord&logoColor=white)](https://discord.gg/WZFjaP6Gt8)
 
 - multi-file review stream with sidebar navigation
 - inline AI and agent annotations beside the code
-- split, stack, and responsive auto layouts
+- split, unified, and responsive auto layouts
 - watch mode for auto-reloading file and Git-backed reviews
 - keyboard, mouse, pager, and Git difftool support
 
 <table>
  <tr>
    <td width="60%" align="center">
-    <img width="845" alt="image" src="https://github.com/user-attachments/assets/35605618-be3f-479e-b6e0-edb089910651" />
+     <img width="845" alt="image" src="https://raw.githubusercontent.com/modem-dev/hunk/refs/heads/main/website/public/docs/images/review-stream.webp" />
      <br />
      <sub>Split view with sidebar and inline AI notes</sub>
    </td>
    <td width="40%" align="center">
-     <img width="507"alt="image" src="https://github.com/user-attachments/assets/92eb8993-f044-436d-a038-8139da5ad8de" />
+     <img width="507"alt="image" src="https://raw.githubusercontent.com/modem-dev/hunk/refs/heads/main/website/public/docs/images/agent-comments.webp" />
      <br />
-     <sub>Stacked view and mouse-selectable menus</sub>
+     <sub>Unified view and mouse-selectable menus</sub>
    </td>
  </tr>
 </table>
 
 ## Install
 
-```bash
-npm i -g hunkdiff
-```
-
-Or with the install script on macOS and Linux, which downloads the prebuilt binary, verifies its checksum, and installs into `~/.hunk`:
+The default installation method on macOS and Linux downloads a standalone binary and installs it into `~/.hunk`. It checks the archive against the release checksum when both `SHA256SUMS` and a supported checksum tool are available, and warns otherwise. Release discovery uses Hunk's anonymous aggregate endpoint with direct GitHub fallback:
 
 ```bash
 curl -fsSL https://hunk.dev/install.sh | sh
 ```
 
-Or with Homebrew:
+Windows users can install with npm or mise. Other installation methods are also available:
 
 ```bash
-brew install hunk
+npm i -g hunkdiff                    # macOS, Linux, or Windows; requires Node.js 22+
+brew install hunk                    # macOS or Linux
+mise use -g hunk                     # macOS, Linux, or Windows
 ```
 
 > [!NOTE]
 > If you previously installed hunk via `modem-dev/tap`, be sure to uninstall it first with `brew uninstall modem-dev/tap/hunk`.
 
-Or with [mise](https://mise.jdx.dev) (Windows requires mise 2026.8.6 or newer):
-
-```bash
-mise use -g hunk
-```
+Windows requires mise 2026.8.6 or newer. Nix users can use the `default` package exported in `flake.nix`; see [the Nix guide](https://github.com/modem-dev/hunk/blob/main/nix/README.md) for details. Hunk also ships as a default tool in [Omarchy](https://omarchy.org), installed through mise.
 
 Requirements:
 
 - macOS, Linux, or Windows
 - On x86-64, a CPU with SSE4.2 (Intel Nehalem 2008+, AMD Bulldozer 2011+); arm64 has no CPU feature floor
-- Node.js 18+ for the npm install; the install script, Homebrew, mise, and Nix ship a standalone binary
+- Node.js 22+ for the npm install; the install script, Homebrew, mise, and Nix ship a standalone binary that does not require Node.js
 - Git recommended for most workflows
 
-> Nix users can use the `default` package exported in `flake.nix` instead. See [nix/README.md](./nix/README.md) for details.
+### Update Hunk
 
-> Hunk also ships as a default tool in [Omarchy](https://omarchy.org), installed through mise.
+Starting with Hunk 0.20, npm, Homebrew, and default install-script installs use Hunk’s canonical update command:
 
-Later, `hunk update` installs the newest release with whichever package manager you used (`hunk update --check` just reports the versions). mise, Nix, and source installs print the command that updates them instead.
+```bash
+hunk update          # install the newest release
+hunk update --check  # check without installing
+hunk update 0.20.0   # select an exact npm or default install-script release
+```
+
+On an older release, update once with the installer or package manager that installed Hunk, then use `hunk update` going forward. Custom `HUNK_INSTALL_DIR` installs must re-run the installer with the same directory; mise, Nix, and source installs use their owning tools instead.
 
 ## Quick start
 
@@ -86,17 +87,51 @@ hunk --fast                    # experimentally offload eligible syntax highligh
 hunk diff --watch              # auto-reload as the working tree changes
 hunk show                      # review the latest commit
 hunk show HEAD~1               # review an earlier commit
+hunk log                       # browse history on a terminal; print when redirected
+hunk log --static              # force static output, paging when needed
 ```
+
+`hunk log` is one auto-responsive, read-only history surface, not a repository manager. On a
+terminal it opens the desktop history browser; pipes and redirects receive shell-native static
+records automatically, and `--static` forces static output that pages only when needed. The selected VCS adapter
+owns traversal, filtering, refs, and how a history item opens for review; the bundled Git and
+Jujutsu adapters both implement that public capability. Static output keeps full commit, author,
+date, message, branch/bookmark, remote, and tag details; `--oneline` provides compact records, and
+`--theme` uses the same palette as Hunk review. Interactive history groups commits by local-calendar
+day with account-like author handles and relative times, while keeping commit ids right-aligned and
+clickable. Enable **Graph view** from the View menu to replace day groups with commit-topology lanes.
+Press `v` and move with `Up`/`Down` or `k`/`j` to select a contiguous range. `Shift+Up`/`Shift+Down`, uppercase `K`/`J`, and Shift-click extend directly. `Escape` collapses the selection; opening the range
+reviews the inclusive cumulative change from the oldest commit's parent through the newest commit.
+History also shares review's `b`/`f` full-page and `u`/`d` half-page movement keys.
+Range selection is disabled with `--all` or author, message, date, and path filters because traversal can interleave or hide commits.
+After opening a commit or range, quit its normal Hunk review to return to the same selection.
+History controls are configurable through canonical `hunk.history.*` [keybindings](https://hunk.dev/docs/configure/keybindings/).
+
+### Working with GitHub
+
+Hunk bundles `hunk gh`, so pull requests, commits, and comparisons open directly without the
+GitHub CLI or a separate extension:
+
+```bash
+hunk gh pr                         # infer the open PR for the current branch
+hunk gh pr 123                     # infer the repository from origin
+hunk gh pr 'modem-dev/hunk#123'    # quote this form for shells that treat # as a comment
+hunk gh commit a1b2c3d --repo modem-dev/hunk
+hunk gh compare main...feature --repo modem-dev/hunk
+```
+
+Public repositories work anonymously. Set `GH_TOKEN`, or `GITHUB_TOKEN` when it is absent, for
+private repositories and higher API limits. GitHub Enterprise is not currently supported.
 
 ### Working with Jujutsu and Sapling
 
-Hunk auto-detects Jujutsu and Sapling checkouts, so `hunk diff [revset]` and `hunk show [revset]` use native revsets inside jj or Sapling workspaces. To override VCS detection, set `vcs = "git"` or `vcs = "jj"` or `vcs = "sl"` in [config](#config).
+Hunk auto-detects Jujutsu and Sapling checkouts, so `hunk diff [revset]` and `hunk show [revset]` use native revsets inside jj or Sapling workspaces. `hunk log --vcs jj` also reads JJ history directly, including in a non-colocated workspace. To override VCS detection, set `vcs = "git"` or `vcs = "jj"` or `vcs = "sl"` in [config](#config).
 
 ### Working with raw files and patches
 
 ```bash
-hunk diff before.ts after.ts                # compare two files directly
-hunk diff before.ts after.ts --watch        # auto-reload when either file changes
+hunk diff --files before.ts after.ts        # compare two files directly
+hunk diff --files before.ts after.ts --watch # auto-reload when either file changes
 git diff --no-color | hunk patch -          # review a patch from stdin
 ```
 
@@ -114,21 +149,21 @@ A good generic prompt is:
 Load the Hunk skill and use it for this review. Run `hunk skill path` to get the skill path.
 ```
 
-For the full live-session and `--agent-context` workflow guide, see [docs/agent-workflows.md](docs/agent-workflows.md). Experimental rich STML note bodies require starting the review with `--experimental`; plain agent notes remain the default.
+For the full live-session and `--agent-context` workflow guide, see [the agent workflow guide](https://github.com/modem-dev/hunk/blob/main/docs/agent-workflows.md). Experimental rich STML note bodies require starting the review with `--experimental`; plain agent notes remain the default.
 
 ## Feature comparison
 
-| Capability                         | [hunk](https://github.com/modem-dev/hunk) | [lumen](https://github.com/jnsahaj/lumen) | [difftastic](https://github.com/Wilfred/difftastic) | [delta](https://github.com/dandavison/delta) | [diff-so-fancy](https://github.com/so-fancy/diff-so-fancy) | [diff](https://www.gnu.org/software/diffutils/) |
-| ---------------------------------- | ----------------------------------------- | ----------------------------------------- | --------------------------------------------------- | -------------------------------------------- | ---------------------------------------------------------- | ----------------------------------------------- |
-| Review-first interactive UI        | ✅                                        | ✅                                        | ❌                                                  | ❌                                           | ❌                                                         | ❌                                              |
-| Multi-file review stream + sidebar | ✅                                        | ✅                                        | ❌                                                  | ❌                                           | ❌                                                         | ❌                                              |
-| Inline agent / AI annotations      | ✅                                        | ❌                                        | ❌                                                  | ❌                                           | ❌                                                         | ❌                                              |
-| Responsive auto split/stack layout | ✅                                        | ❌                                        | ❌                                                  | ❌                                           | ❌                                                         | ❌                                              |
-| Mouse support inside the viewer    | ✅                                        | ✅                                        | ❌                                                  | ❌                                           | ❌                                                         | ❌                                              |
-| Runtime view toggles               | ✅                                        | ✅                                        | ❌                                                  | ❌                                           | ❌                                                         | ❌                                              |
-| Syntax highlighting                | ✅                                        | ✅                                        | ✅                                                  | ✅                                           | ❌                                                         | ❌                                              |
-| Structural diffing                 | ❌                                        | ❌                                        | ✅                                                  | ❌                                           | ❌                                                         | ❌                                              |
-| Pager-compatible mode              | ✅                                        | ❌                                        | ✅                                                  | ✅                                           | ✅                                                         | ✅                                              |
+| Capability                           | [hunk](https://github.com/modem-dev/hunk) | [lumen](https://github.com/jnsahaj/lumen) | [difftastic](https://github.com/Wilfred/difftastic) | [delta](https://github.com/dandavison/delta) | [diff-so-fancy](https://github.com/so-fancy/diff-so-fancy) | [diff](https://www.gnu.org/software/diffutils/) |
+| ------------------------------------ | ----------------------------------------- | ----------------------------------------- | --------------------------------------------------- | -------------------------------------------- | ---------------------------------------------------------- | ----------------------------------------------- |
+| Review-first interactive UI          | ✅                                        | ✅                                        | ❌                                                  | ❌                                           | ❌                                                         | ❌                                              |
+| Multi-file review stream + sidebar   | ✅                                        | ✅                                        | ❌                                                  | ❌                                           | ❌                                                         | ❌                                              |
+| Inline agent / AI annotations        | ✅                                        | ❌                                        | ❌                                                  | ❌                                           | ❌                                                         | ❌                                              |
+| Responsive auto split/unified layout | ✅                                        | ❌                                        | ❌                                                  | ❌                                           | ❌                                                         | ❌                                              |
+| Mouse support inside the viewer      | ✅                                        | ✅                                        | ❌                                                  | ❌                                           | ❌                                                         | ❌                                              |
+| Runtime view toggles                 | ✅                                        | ✅                                        | ❌                                                  | ❌                                           | ❌                                                         | ❌                                              |
+| Syntax highlighting                  | ✅                                        | ✅                                        | ✅                                                  | ✅                                           | ❌                                                         | ❌                                              |
+| Structural diffing                   | ❌                                        | ❌                                        | ✅                                                  | ❌                                           | ❌                                                         | ❌                                              |
+| Pager-compatible mode                | ✅                                        | ❌                                        | ✅                                                  | ✅                                           | ✅                                                         | ✅                                              |
 
 Hunk is optimized for reviewing a full changeset interactively.
 
@@ -144,15 +179,19 @@ You can persist preferences to a config file:
 Example:
 
 ```toml
-theme = "github-dark-default" # any built-in theme id, auto, or custom
-mode = "auto"        # auto, split, stack
+theme = "terminal"   # terminal, auto, any built-in theme id, or custom
+mode = "auto"        # auto, split, unified
 vcs = "git"          # git, jj, sl
 watch = false
 exclude_untracked = false
 line_numbers = true
 tab_width = 4        # tab stops, 1-16
+file_gap = 1         # rows between files, including the ─ rule; 0 hides it
+hunk_gap = 0         # blank rows before later hunks
+wheel_scroll_lines = "auto" # auto acceleration, or a fixed 1-10 rows per event
 wrap_lines = false
 menu_bar = true
+animations = true
 sidebar = "auto"     # "auto", true, false
 agent_notes = false
 prompt_save_view_preferences = true
@@ -160,11 +199,14 @@ transparent_background = false
 ```
 
 Choose a built-in theme, `auto`, or a custom theme with `theme`. See
-[docs/themes.md](docs/themes.md) for automatic selection, custom theme tables,
+[the theme guide](https://hunk.dev/docs/configure/themes/) for automatic selection, custom theme tables,
 syntax scopes, and legacy syntax-table migration.
 
 `exclude_untracked` affects Git/Sapling working-tree `hunk diff` sessions only.
 `tab_width` controls source-code tab stops and can be overridden with `-x4` or `--tab-width 4`.
+`file_gap` is separator height between files, including the `─` rule; `hunk_gap` is blank rows before later hunks.
+`wheel_scroll_lines` is a user-only preference and can be overridden with `--wheel-scroll-lines 3`.
+Set `animations = false` to make panes open and close immediately.
 `prompt_save_view_preferences = false` disables the quit prompt for saving changed view preferences.
 `transparent_background` can also be written as `transparentBackground`.
 
@@ -173,7 +215,7 @@ syntax scopes, and legacy syntax-table migration.
 Every keyboard shortcut is a named command, and a `[keybindings]` table in your
 user config remaps command ids to the keys you want them on — several keys per
 command, exclusive claims over defaults, and `false` to unbind. See
-[docs/keybindings.md](docs/keybindings.md) for the rules, the chord grammar,
+[the keybinding guide](https://hunk.dev/docs/configure/keybindings/) for the rules, the chord grammar,
 and the full table of built-in commands and their default keys.
 
 ### Git integration
@@ -231,11 +273,11 @@ repository's `.hunk/extensions/` (after you explicitly trust that repository),
 and from `--extension <path>` for development. `--no-extensions` turns those off
 for one run; Hunk's own bundled backends (Git, Jujutsu, and Sapling) stay loaded.
 
-A Phase 1 extension can contribute themes and file-extension → language
-mappings, add a VCS backend, rewrite the changeset before review (collapse
-lockfiles, reorder files by review priority), replace the file-navigation
-sidebar with its own React component, react to lifecycle events, and show
-transient messages:
+An extension can add generic top-level CLI workflows, contribute themes and
+file-extension → language mappings, add a VCS backend, rewrite the changeset
+before review (collapse lockfiles, reorder files by review priority), replace
+the file-navigation sidebar with its own React component, react to lifecycle
+events, and show transient messages:
 
 ```ts
 // ~/.config/hunk/extensions/collapse-lockfiles.ts
@@ -263,22 +305,23 @@ Browse community extensions at
 publish yours by pushing the extension to a repository root and adding that
 topic.
 
-See [docs/extensions.md](docs/extensions.md) for the full API, the trust model,
+See [the extension guide](https://hunk.dev/docs/extend/extensions/) for the full API, the trust model,
 publishing guidance, and the `[extensions]` / `[extension.<id>]` config reference.
-Installable examples include [review triage](examples/extensions/review-triage/),
-[authoritative review snapshot export](examples/extensions/review-snapshot-export/), an optional
-[rendered Markdown file view](examples/extensions/rendered-markdown/), and a
-[Vim navigation mode](examples/extensions/vim-navigation/) built from public semantic commands.
+Installable examples include
+[review triage](https://github.com/modem-dev/hunk/tree/main/examples/extensions/review-triage),
+[authoritative review snapshot export](https://github.com/modem-dev/hunk/tree/main/examples/extensions/review-snapshot-export), an optional
+[rendered Markdown file view](https://github.com/modem-dev/hunk/tree/main/examples/extensions/rendered-markdown), and a
+[Vim navigation mode](https://github.com/modem-dev/hunk/tree/main/examples/extensions/vim-navigation) built from public semantic commands.
 
 ### OpenTUI component
 
 Hunk also publishes `HunkDiffView` and lower-level primitives from `hunkdiff/opentui` for embedding the same diff renderer in your own OpenTUI app.
 
-See [docs/opentui-component.md](docs/opentui-component.md) for install, API, and runnable examples.
+See [the OpenTUI component guide](https://hunk.dev/docs/reference/opentui-components/) for install, API, and runnable examples.
 
 ## Examples
 
-Ready-to-run demo diffs live in [`examples/`](examples/README.md).
+Ready-to-run demo diffs live in [the examples directory](https://github.com/modem-dev/hunk/tree/main/examples).
 
 Each example includes the exact command to run from the repository root.
 
@@ -286,7 +329,7 @@ Each example includes the exact command to run from the repository root.
 
 💬 _Chat with users/contributors on the [Modem Discord server](https://discord.gg/WZFjaP6Gt8)_
 
-For source setup, tests, packaging checks, and repo architecture, see [CONTRIBUTING.md](CONTRIBUTING.md).
+For source setup, tests, packaging checks, and repo architecture, see [the contribution guide](https://github.com/modem-dev/hunk/blob/main/CONTRIBUTING.md).
 
 ## Sponsor
 
@@ -302,4 +345,4 @@ Sponsored by [Modem](https://modem.dev?utm_source=github&utm_medium=oss&utm_camp
 
 ## License
 
-[MIT](LICENSE)
+[MIT](https://github.com/modem-dev/hunk/blob/main/LICENSE)

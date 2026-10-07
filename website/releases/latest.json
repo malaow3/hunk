@@ -1,6 +1,6 @@
 {
-  "version": "0.19.0",
-  "minor": "0.19",
-  "date": "2026-08-16",
-  "summary": "Git-installable extensions, exact-line agent guidance"
+  "version": "0.23.0",
+  "minor": "0.23",
+  "date": "2026-09-30",
+  "summary": "Search diffs, review GitHub, follow your terminal"
 }

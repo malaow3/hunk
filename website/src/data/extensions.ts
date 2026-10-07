@@ -29,13 +29,14 @@ export type ExtensionCategory =
   | "Line highlighter"
   | "File view"
   | "VCS backend"
-  | "Changeset transform";
+  | "Changeset transform"
+  | "Language";
 
 /** One directory listing, before build-time repository metadata is merged in. */
 export interface ExtensionListing {
   /** `owner/name`, the argument `hunk extension install` takes. */
   repo: string;
-  /** Manifest `name`; the id the extension owns once installed. */
+  /** Extension id Hunk derives from the repository name when installed. */
   name: string;
   /** One curated line. Repository descriptions drift and get noisy. */
   summary: string;
@@ -108,17 +109,60 @@ export const EXTENSION_CATALOG: readonly ExtensionListing[] = [
     apiVersion: 6,
   },
   {
-    repo: "elucid/hunk-less-search",
-    name: "hunk-less-search",
-    summary: "less-style forward search across the review stream, with in-diff match marks.",
-    categories: ["Keyboard mode", "Line highlighter", "Pane", "Command"],
+    repo: "astwys/hunk-file-order",
+    name: "hunk-file-order",
+    summary: "Chooses the file order in Hunk reviews, including Lazygit's mixed order.",
+    categories: ["Changeset transform"],
     version: "0.1.0",
-    apiVersion: 5,
+    apiVersion: 6,
+  },
+  {
+    repo: "evantravers/hunk-mark-as-reviewed",
+    name: "hunk-mark-as-reviewed",
+    summary:
+      "Marks hunks and files as reviewed, tracks progress in a review pane, and can hide what you've finished.",
+    categories: ["Pane", "Command", "Line highlighter", "Changeset transform"],
+    version: "0.1.0",
+    apiVersion: 8,
+  },
+  {
+    repo: "evantravers/hunk-notes-to-markdown",
+    name: "hunk-notes-to-markdown",
+    summary: "Yanks every review note into the clipboard as formatted Markdown with one key (Y).",
+    categories: ["Command"],
+    version: "0.1.0",
+    apiVersion: 6,
   },
   {
     repo: "gentilfp/hunk-codeowners",
     name: "hunk-codeowners",
     summary: "Shows CODEOWNERS context for the current changeset and selected file.",
+    categories: ["Pane", "Command"],
+    version: "0.1.0",
+    apiVersion: 6,
+  },
+  {
+    repo: "HackAttack/hunk-starlark",
+    name: "hunk-starlark",
+    summary: "Highlights Bazel, Buck2, and other Starlark files as Python.",
+    categories: ["Language"],
+    version: "1.0.0",
+    apiVersion: 9,
+  },
+  {
+    repo: "jacegodk/hunk-viewed",
+    name: "hunk-viewed",
+    summary:
+      "GitLab-style viewed marks: fold viewed files, browse one at a time, and skip what's already reviewed, with marks kept between runs.",
+    categories: ["Pane", "File view", "Command", "Keyboard mode"],
+    version: "0.1.0",
+    apiVersion: 16,
+  },
+  {
+    repo: "joshedler/hunk-git-lite",
+    name: "hunk-git-lite",
+    summary:
+      "Adds a git status pane with stage/unstage commands, so you can act on a review without leaving it.",
     categories: ["Pane", "Command"],
     version: "0.1.0",
     apiVersion: 6,
@@ -132,6 +176,24 @@ export const EXTENSION_CATALOG: readonly ExtensionListing[] = [
     apiVersion: 5,
   },
   {
+    repo: "morinokami/hunk-triage",
+    name: "hunk-triage",
+    summary:
+      "Classifies changed files with TypeSafe's Jev and regroups the file pane by review priority, from core changes down to generated and unclassified.",
+    categories: ["Pane", "Changeset transform"],
+    version: "0.1.0",
+    apiVersion: 25,
+  },
+  {
+    repo: "muzomer/hunk-commit",
+    name: "hunk-commit",
+    summary:
+      "Marks hunks while you review, then stages, commits, or folds them into an earlier commit — in git or Jujutsu, leaving files on disk untouched.",
+    categories: ["Command", "Line highlighter"],
+    version: "0.1.0",
+    apiVersion: 8,
+  },
+  {
     repo: "phl28/hunk-gh-review",
     name: "hunk-gh-review",
     summary:
@@ -140,20 +202,43 @@ export const EXTENSION_CATALOG: readonly ExtensionListing[] = [
     version: "0.1.0",
     apiVersion: 6,
   },
+  {
+    repo: "rschoch/hunk-compact-filenav",
+    name: "hunk-compact-filenav",
+    summary:
+      "A smart alternative files pane for Hunk that shows compact file paths, useful when viewing deeply nested file and package structures.",
+    categories: ["Pane", "Command"],
+    version: "0.1.0",
+    apiVersion: 16,
+  },
+  {
+    repo: "sadick254/hunk-commit-log",
+    name: "hunk-commit-log",
+    summary:
+      "Reviews a branch commit by commit: the series beside the diff, the message above it, and keys to step between them.",
+    categories: ["Pane", "Command", "Changeset transform"],
+    version: "0.1.0",
+    apiVersion: 6,
+  },
+  {
+    repo: "TreeHappy/hunkydory",
+    name: "hunkydory",
+    summary:
+      "Exports a review's diffs and notes to Markdown and JSON, and re-imports comments from an export into a live session.",
+    categories: ["Command"],
+    version: "0.1.0",
+    apiVersion: 1,
+  },
+  {
+    repo: "victor-software-house/hunk-history",
+    name: "hunk-history",
+    summary:
+      "Browses live Git history in Files/History tabs, with immediate commit review, double-click ranges, and staged or unstaged comparisons.",
+    categories: ["Pane", "Command", "Changeset transform"],
+    version: "0.0.4",
+    apiVersion: 16,
+  },
 ];
-
-/**
- * Serialize one value for a raw `<script type="application/ld+json">` body.
- *
- * `JSON.stringify` leaves `<` alone, so a listing whose text contained
- * `</script>` would close the element and turn the rest of the payload into
- * markup. Escaping `<` as its JSON unicode escape keeps the document valid
- * JSON-LD while making that impossible. The catalog is hand-reviewed today and
- * will be generated from repository descriptions nobody reviews.
- */
-export function toJsonLdScriptBody(value: unknown) {
-  return JSON.stringify(value).replaceAll("<", "\\u003c");
-}
 
 /** GitHub account that publishes one listing. */
 export function ownerOf(listing: ExtensionListing) {
