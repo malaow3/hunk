@@ -388,10 +388,15 @@ function buildTerminalTheme(themeMode?: ThemeMode | null): AppTheme {
 
   // Rules replace the base syntax theme's own, so every unmatched token falls back to the
   // terminal foreground instead of leaking a bundled editor palette.
-  const syntaxScopeOverrides: Record<string, string> = { source: foreground };
+  const terminalBackground = colors?.background ?? fallback.background;
+  const syntaxScopeOverrides: Record<string, string> = {
+    source: readableForeground(foreground, terminalBackground),
+  };
+  const readableSyntaxColor = (slot: keyof typeof ANSI_COLOR_INDEX) =>
+    readableForeground(color(slot), terminalBackground);
   for (const [scopes, slot] of TERMINAL_SYNTAX_SCOPES) {
     for (const scope of scopes) {
-      syntaxScopeOverrides[scope] = color(slot);
+      syntaxScopeOverrides[scope] = readableSyntaxColor(slot);
     }
   }
 

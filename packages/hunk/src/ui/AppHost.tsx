@@ -582,9 +582,7 @@ export function AppHost({
     quitRequestedRef.current = true;
     queueMicrotask(() => {
       const startedWrites = [...pendingWorkspaceWritesRef.current];
-      void Promise.all([onRequestSessionShutdown(), Promise.allSettled(startedWrites)]).finally(
-        onQuit,
-      );
+      void Promise.allSettled([onRequestSessionShutdown(), ...startedWrites]).then(onQuit);
     });
   }, [onQuit, onRequestSessionShutdown]);
 
