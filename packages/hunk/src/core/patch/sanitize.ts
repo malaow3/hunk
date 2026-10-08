@@ -26,7 +26,7 @@ export function stripTerminalControl(text: string) {
 /** Sanitize patch text and retain exact decoded Git paths beside parser-safe headers. */
 export function sanitizePatch(patchText: string): SanitizedGitPatch {
   return sanitizeGitPatch(
-    stripGitLogMetadata(stripTerminalControl(patchText.replaceAll("\r\n", "\n"))),
+    stripGitLogMetadata(stripTerminalControl(patchText.replaceAll("\uFEFF", "").replaceAll("\r\n", "\n"))),
   );
 }
 
