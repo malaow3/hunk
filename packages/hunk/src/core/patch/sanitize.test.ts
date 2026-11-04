@@ -55,6 +55,12 @@ describe("sanitizePatchText", () => {
     expect(sanitizePatchText(colored)).toBe("diff --git a/foo b/foo\n--- a/foo\n+++ b/foo\n");
   });
 
+  test("strips UTF-8 BOM characters from patch text", () => {
+    expect(sanitizePatchText("\uFEFFdiff --git a/f b/f\n--- a/f\n+++ b/f\n+\uFEFFtext\n")).toBe(
+      "diff --git a/f b/f\n--- a/f\n+++ b/f\n+text\n",
+    );
+  });
+
   test("strips git-log commit metadata ahead of the diff body", () => {
     const log = [
       "commit 1234567890abcdef",
