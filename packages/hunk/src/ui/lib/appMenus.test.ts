@@ -49,6 +49,7 @@ function createTestCommands(overrides: Partial<BuildAppCommandsOptions> = {}) {
     openThemeSelector: noop,
     requestQuit: record("requestQuit"),
     scrollCodeHorizontally: noop,
+    scrollCodeToBoundary: noop,
     scrollDiff: noop,
     selectCursorLine: noop,
     stepDiffLine: noop,

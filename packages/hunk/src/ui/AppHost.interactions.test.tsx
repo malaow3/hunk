@@ -749,7 +749,7 @@ describe("App interactions", () => {
       expect(frame).not.toContain("Annotation for alpha.ts");
 
       await act(async () => {
-        await setup.mockInput.typeText("l");
+        await setup.mockInput.typeText("#");
       });
       await flush(setup);
 

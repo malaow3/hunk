@@ -61,6 +61,7 @@ function createTestCommands(
     requestQuit: record("requestQuit"),
     resolvedKeys,
     scrollCodeHorizontally: record("scrollCodeHorizontally"),
+    scrollCodeToBoundary: record("scrollCodeToBoundary"),
     scrollDiff: record("scrollDiff"),
     selectCursorLine: record("selectCursorLine"),
     stepDiffLine: record("stepDiffLine"),
@@ -86,6 +87,38 @@ function createTestCommands(
 }
 
 describe("built-in command chords", () => {
+  test("h and l scroll code, H and L jump to its bounds, and # toggles line numbers", () => {
+    const { commands, ran } = createTestCommands();
+    const press = (name: string) => dispatchAppCommand(commands, keyEvent({ name, sequence: name }))?.id;
+
+    expect(press("h")).toBe("hunk.review.scrollCodeLeft");
+    expect(press("l")).toBe("hunk.review.scrollCodeRight");
+    expect(press("H")).toBe("hunk.review.scrollCodeToStart");
+    expect(press("L")).toBe("hunk.review.scrollCodeToEnd");
+    expect(press("#")).toBe("hunk.view.toggleLineNumbers");
+    expect(ran).toEqual([
+      "scrollCodeHorizontally:-1",
+      "scrollCodeHorizontally:1",
+      "scrollCodeToBoundary:start",
+      "scrollCodeToBoundary:end",
+      "toggleLineNumbers",
+    ]);
+  });
+
+  test("Kitty shifted-letter events also jump to code boundaries", () => {
+    const { commands, ran } = createTestCommands();
+
+    const press = (name: string, sequence: string) =>
+      dispatchAppCommand(
+        commands,
+        keyEvent({ name, sequence, shift: true, source: "kitty" }),
+      )?.id;
+
+    expect(press("h", "H")).toBe("hunk.review.scrollCodeToStart");
+    expect(press("l", "L")).toBe("hunk.review.scrollCodeToEnd");
+    expect(ran).toEqual(["scrollCodeToBoundary:start", "scrollCodeToBoundary:end"]);
+  });
+
   test("every alias of the scroll shortcuts still dispatches", () => {
     const { commands, ran } = createTestCommands();
     const press = (fields: Partial<ParsedKey>) =>

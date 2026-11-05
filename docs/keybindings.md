@@ -141,8 +141,10 @@ Review and shared commands:
 | `hunk.review.previousNote`                     | Previous review note                           | _(none)_                     |
 | `hunk.review.replyToActiveNote`                | Reply to active review note                    | `R`                          |
 | `hunk.review.saveNote`                         | Save a draft review note                       | `ctrl+s`                     |
-| `hunk.review.scrollCodeLeft`                   | Scroll code left (shifted scrolls fast)        | `left`, `shift+left`         |
-| `hunk.review.scrollCodeRight`                  | Scroll code right (shifted scrolls fast)       | `right`, `shift+right`       |
+| `hunk.review.scrollCodeLeft`                   | Scroll code left (shifted scrolls fast)        | `left`, `shift+left`, `h`    |
+| `hunk.review.scrollCodeRight`                  | Scroll code right (shifted scrolls fast)       | `right`, `shift+right`, `l`  |
+| `hunk.review.scrollCodeToEnd`                  | Scroll code to the last column                 | `L`                          |
+| `hunk.review.scrollCodeToStart`                | Scroll code to the first column                | `H`                          |
 | `hunk.review.startNote`                        | Add a review note                              | `c`                          |
 | `hunk.review.startVisualSelection`             | Start visual line selection                    | `v`                          |
 | `hunk.review.stepDown`                         | Move down one line or note                     | `down`, `j`                  |
@@ -163,9 +165,11 @@ Review and shared commands:
 | `hunk.view.toggleCopyDecorations`              | Toggle copy decorations                        | _(none)_                     |
 | `hunk.view.toggleFilesPane`                    | Toggle files pane                              | `s`                          |
 | `hunk.view.toggleHunkHeaders`                  | Toggle hunk headers                            | `m`                          |
-| `hunk.view.toggleLineNumbers`                  | Toggle line numbers                            | `l`                          |
+| `hunk.view.toggleLineNumbers`                  | Toggle line numbers                            | `#`                          |
 | `hunk.view.toggleLineWrap`                     | Toggle line wrapping                           | `w`                          |
 | `hunk.view.toggleMenuBar`                      | Toggle menu bar                                | `M`                          |
+
+Horizontal scrolling and `H` / `L` apply to unwrapped code. Use `w` to turn off wrapping if horizontal scrolling does nothing.
 
 The files-pane command follows the named `hunk:files` role. If an extension
 replaces that role, the command and **View → Files pane** toggle the resolved

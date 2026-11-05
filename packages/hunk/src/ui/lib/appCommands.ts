@@ -138,6 +138,7 @@ export interface BuildAppCommandsOptions {
   /** Chords resolved against the user's `[keybindings]`; defaults apply where absent. */
   resolvedKeys?: ResolvedCommandKeys;
   scrollCodeHorizontally: (delta: number) => void;
+  scrollCodeToBoundary: (boundary: "start" | "end") => void;
   scrollDiff: (delta: number, unit: ScrollUnit) => void;
   stepDiffLine: (delta: number) => void;
   selectCursorLine: (style: CursorLine) => void;
@@ -249,6 +250,8 @@ function builtinCommandHandlers(
           (key.shift ? FAST_CODE_HORIZONTAL_SCROLL_COLUMNS : 1) * count,
         ),
     },
+    "hunk.review.scrollCodeToStart": { run: () => options.scrollCodeToBoundary("start") },
+    "hunk.review.scrollCodeToEnd": { run: () => options.scrollCodeToBoundary("end") },
     "hunk.review.alignCurrentLineTop": {
       isEnabled: () => options.canAlignCurrentLine,
       run: () => options.alignCurrentLine("top"),
@@ -373,6 +376,7 @@ const NOOP_COMMAND_OPTIONS: BuildAppCommandsOptions = (() => {
     openThemeSelector: noop,
     requestQuit: noop,
     scrollCodeHorizontally: noop,
+    scrollCodeToBoundary: noop,
     scrollDiff: noop,
     stepDiffLine: noop,
     selectCursorLine: noop,

@@ -1040,6 +1040,15 @@ export function App({
     [maxCodeHorizontalOffset, wrapLines],
   );
 
+  /** Reveal the first or last code columns in the current unwrapped review. */
+  const scrollCodeToBoundary = useCallback(
+    (boundary: "start" | "end") => {
+      if (wrapLines) return;
+      setCodeHorizontalOffset(boundary === "start" ? 0 : maxCodeHorizontalOffset);
+    },
+    [maxCodeHorizontalOffset, wrapLines],
+  );
+
   /** Preserve the current review position before changing the active diff layout. */
   const selectLayoutMode = useCallback(
     (mode: LayoutMode) => {
@@ -1411,6 +1420,7 @@ export function App({
         requestQuit,
         resolvedKeys: resolvedCommandKeys,
         scrollCodeHorizontally,
+        scrollCodeToBoundary,
         scrollDiff,
         stepDiffLine,
         selectCursorLine,

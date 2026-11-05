@@ -993,6 +993,37 @@ export default function (hunk) {
     }
   });
 
+  test("h/l scroll code and H/L jump to its bounds in a real PTY", async () => {
+    const fixture = harness.createLongWrapFilePair();
+    const session = await harness.launchHunk({
+      args: ["diff", "--files", fixture.before, fixture.after, "--mode", "split", "--no-wrap"],
+      cols: 102,
+      rows: 20,
+    });
+
+    try {
+      const initial = await session.waitForText(/View\s+Navigate\s+Agent\s+Help/, {
+        timeout: 15_000,
+      });
+      expect(initial).toContain("this is a very long");
+      await harness.ensureKeyboardIsLive(session);
+
+      await session.type("L");
+      await harness.waitForSnapshot(session, (text) => text.includes("ge';") && !text.includes("this is a very long"), 5_000);
+
+      await session.type("H");
+      await harness.waitForSnapshot(session, (text) => text.includes("this is a very long") && !text.includes("ge';"), 5_000);
+
+      await session.type("l".repeat(64));
+      await harness.waitForSnapshot(session, (text) => text.includes("ge';"), 5_000);
+
+      await session.type("h".repeat(64));
+      await harness.waitForSnapshot(session, (text) => text.includes("this is a very long"), 5_000);
+    } finally {
+      session.close();
+    }
+  });
+
   test("shifted mouse-wheel input scrolls code horizontally in a real PTY", async () => {
     const fixture = harness.createLongWrapFilePair();
     const session = await harness.launchHunk({
