@@ -344,7 +344,7 @@ const BUILTIN_COMMANDS = [
   },
   {
     id: "hunk.review.scrollCodeToStart",
-    title: "Scroll to the start of the current line",
+    title: "Scroll to column zero",
     category: "review",
     defaultKeys: ["0", "H"],
     locus: "client-local",

@@ -33,7 +33,7 @@ function createLargeLineFixture(lineCount: number, widestLine: string): DiffFile
 
 describe("code column measurement", () => {
   test("finds non-whitespace boundaries using terminal columns", () => {
-    expect(codeLineBoundaryOffset("\t  日本abc  \n", "start", 4, 4)).toBe(6);
+    expect(codeLineBoundaryOffset("\t  日本abc  \n", "start", 4, 4)).toBe(0);
     expect(codeLineBoundaryOffset("\t  日本abc  \n", "end", 4, 4)).toBe(9);
     expect(codeLineBoundaryOffset("  \t ", "end", 4)).toBe(0);
     expect(codeLineBoundaryOffset("short", "end", 20)).toBe(0);

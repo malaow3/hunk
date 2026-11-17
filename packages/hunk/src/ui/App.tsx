@@ -1114,10 +1114,14 @@ export function App({
     [maxCodeHorizontalOffset, wrapLines],
   );
 
-  /** Reveal the selected line's first or last non-whitespace code column. */
+  /** Reveal column zero or the selected line's last non-whitespace code column. */
   const scrollCodeToBoundary = useCallback(
     (boundary: "start" | "end") => {
       if (wrapLines) return;
+      if (boundary === "start") {
+        setCodeHorizontalOffset(0);
+        return;
+      }
       const cursor = cursorLine === "off" ? null : review.getLineCursor();
       const file = cursor && filteredFiles.find((candidate) => candidate.id === cursor.fileId);
       const source = file && review.sourceStatusByFileId[file.id];

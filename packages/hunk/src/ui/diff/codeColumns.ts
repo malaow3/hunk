@@ -53,7 +53,7 @@ export function codeLineBoundaryOffset(
   const expanded = expandDiffTabs(sanitizeTerminalLine(line.replace(/\r?\n$/, "")), tabWidth);
   if (!expanded.trim()) return 0;
   if (boundary === "start") {
-    return measureTextWidth(expanded.match(/^\s*/)?.[0] ?? "");
+    return 0;
   }
   return Math.max(0, measureTextWidth(expanded.trimEnd()) - Math.max(1, viewportWidth));
 }
