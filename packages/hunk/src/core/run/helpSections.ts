@@ -54,6 +54,10 @@ export const HELP_SECTIONS: readonly HelpSectionSpec[] = [
         commandIds: ["hunk.review.scrollCodeLeft", "hunk.review.scrollCodeRight"],
         description: "scroll code sideways (Shift = faster)",
       },
+      {
+        commandIds: ["hunk.review.scrollCodeToStart", "hunk.review.scrollCodeToEnd"],
+        description: "first / last code columns",
+      },
       { commandIds: ["hunk.review.jumpToTop"], description: "jump to start" },
       { commandIds: ["hunk.review.jumpToBottom"], description: "jump to end" },
     ],

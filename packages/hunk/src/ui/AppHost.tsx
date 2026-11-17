@@ -248,7 +248,7 @@ export function AppHost({
     if (!coordinator.beginShutdown()) return;
     queueMicrotask(() => {
       const startedWrites = coordinator.settleStartedWrites();
-      void Promise.all([onRequestSessionShutdown(), startedWrites]).finally(onQuit);
+      void Promise.allSettled([onRequestSessionShutdown(), startedWrites]).then(onQuit);
     });
   }, [coordinator, onQuit, onRequestSessionShutdown]);
 

@@ -131,13 +131,16 @@ describe("themes", () => {
     });
     expect(theme.syntaxScopeOverrides).toMatchObject({
       source: "#c0caf5",
-      comment: "#414868",
+      comment: "#ffffff",
       keyword: "#bb9af7",
       string: "#9ece6a",
       "constant.numeric": "#7dcfff",
       "entity.name.function": "#7aa2f7",
       "entity.name.type": "#e0af68",
     });
+    for (const color of Object.values(theme.syntaxScopeOverrides ?? {})) {
+      expect(contrastRatio(color, theme.background)).toBeGreaterThanOrEqual(4.5);
+    }
     // Repeated resolution returns the same object so theme-keyed memoization stays stable.
     expect(resolveTheme(TERMINAL_THEME_ID, "light")).toBe(theme);
   });

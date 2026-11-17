@@ -1,10 +1,10 @@
 import type { ExtensionPaneLayoutPlan, PaneBounds, PlannedPane } from "./extensionPanes";
 
 /** Duration of pane reveal and dismissal motion. */
-export const PANE_SLIDE_DURATION_MS = 180;
+export const PANE_SLIDE_DURATION_MS = 140;
 
 /** Maximum rate for committing intermediate pane animation geometry to React. */
-export const PANE_SLIDE_MAX_FPS = 30;
+export const PANE_SLIDE_MAX_FPS = 60;
 
 const PANE_SLIDE_FRAME_INTERVAL_MS = 1_000 / PANE_SLIDE_MAX_FPS;
 
