@@ -46,9 +46,9 @@ describe("buildHelpSections", () => {
     expect(keysFor(sections, "previous / next hunk")).toBe("[ / ]");
     expect(keysFor(sections, "half page down / up")).toBe("d / u");
     expect(keysFor(sections, "move through lines and notes")).toBe("Up / Down");
-    expect(keysFor(sections, "unified / split / auto")).toBe("1 / 2 / 0");
+    expect(keysFor(sections, "unified / split / auto")).toBe("1 / 2 / 3");
     expect(keysFor(sections, "lines / wrap / metadata / menu")).toBe("# / w / m / M");
-    expect(keysFor(sections, "current line start / end (ignoring whitespace)")).toBe("H / L");
+    expect(keysFor(sections, "current line start / end")).toBe("0 / $");
     expect(keysFor(sections, "annotated hunk / exact note")).toBe("{ / }");
   });
 

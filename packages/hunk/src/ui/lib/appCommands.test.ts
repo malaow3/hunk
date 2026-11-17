@@ -106,6 +106,18 @@ describe("built-in command chords", () => {
     ]);
   });
 
+  test("0 and $ reveal current line boundaries and both layout key sets select views", () => {
+    const { commands, ran } = createTestCommands();
+    const press = (name: string) => dispatchAppCommand(commands, keyEvent({ name, sequence: name }))?.id;
+
+    expect(press("0")).toBe("hunk.review.scrollCodeToStart");
+    expect(press("$")).toBe("hunk.review.scrollCodeToEnd");
+    for (const [key, id] of [["1", "Unified"], ["=", "Unified"], ["2", "Split"], ["-", "Split"], ["3", "Auto"], ["+", "Auto"]]) {
+      expect(press(key!)).toBe(`hunk.view.layout${id}`);
+    }
+    expect(ran.slice(0, 2)).toEqual(["scrollCodeToBoundary:start", "scrollCodeToBoundary:end"]);
+  });
+
   test("Kitty shifted-letter events also jump to code boundaries", () => {
     const { commands, ran } = createTestCommands();
 

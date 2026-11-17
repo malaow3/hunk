@@ -883,7 +883,7 @@ export default function (hunk) {
 
       const auto = await harness.pressAndWaitForSnapshot(
         session,
-        "0",
+        "3",
         (text) => /▌.*▌/.test(text) && harness.countMatches(text, /alpha\.ts/g) >= 2,
         5_000,
       );
@@ -993,7 +993,7 @@ export default function (hunk) {
     }
   });
 
-  test("h/l scroll code and H/L follow the current line in a real PTY", async () => {
+  test("h/l scroll code and 0/$ follow the current line in a real PTY", async () => {
     const fixture = harness.createLongWrapFilePair();
     const session = await harness.launchHunk({
       args: ["diff", "--files", fixture.before, fixture.after, "--mode", "split", "--no-wrap"],
@@ -1009,13 +1009,13 @@ export default function (hunk) {
       await harness.ensureKeyboardIsLive(session);
 
       // The deletion is short, so its end must not jump to the longer addition's end.
-      await session.type("L");
+      await session.type("$");
       expect(await session.text({ immediate: true })).toContain("this is a very long");
 
-      await session.type("jL");
+      await session.type("j$");
       await harness.waitForSnapshot(session, (text) => text.includes("ge';") && !text.includes("this is a very long"), 5_000);
 
-      await session.type("H");
+      await session.type("0");
       await harness.waitForSnapshot(session, (text) => text.includes("this is a very long") && !text.includes("ge';"), 5_000);
 
       await session.type("l".repeat(64));

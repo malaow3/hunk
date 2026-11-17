@@ -153,8 +153,8 @@ Review and shared commands:
 | `hunk.review.saveNote`                         | Save a draft review note                       | `ctrl+s`                     |
 | `hunk.review.scrollCodeLeft`                   | Scroll code left (shifted scrolls fast)        | `left`, `shift+left`, `h`    |
 | `hunk.review.scrollCodeRight`                  | Scroll code right (shifted scrolls fast)       | `right`, `shift+right`, `l`  |
-| `hunk.review.scrollCodeToEnd`                  | Scroll to the current line's last non-whitespace column | `L`                 |
-| `hunk.review.scrollCodeToStart`                | Scroll to the current line's first non-whitespace column | `H`                |
+| `hunk.review.scrollCodeToEnd`                  | Scroll to the current line's last non-whitespace column | `$`, `L`            |
+| `hunk.review.scrollCodeToStart`                | Scroll to the current line's first non-whitespace column | `0`, `H`           |
 | `hunk.review.startNote`                        | Add a review note                              | `c`                          |
 | `hunk.review.startVisualSelection`             | Start visual line selection                    | `v`                          |
 | `hunk.review.stepDown`                         | Move down one line or note                     | `down`, `j`                  |
@@ -167,9 +167,9 @@ Review and shared commands:
 | `hunk.view.cursorLineNumber`                   | Mark the current line number                   | _(none)_                     |
 | `hunk.view.cursorLineOff`                      | Hide the current-line marker                   | _(none)_                     |
 | `hunk.view.cursorLineRow`                      | Highlight the current row                      | _(none)_                     |
-| `hunk.view.layoutAuto`                         | Auto layout                                    | `0`                          |
-| `hunk.view.layoutSplit`                        | Split layout                                   | `2`                          |
-| `hunk.view.layoutUnified`                      | Unified layout                                 | `1`                          |
+| `hunk.view.layoutAuto`                         | Auto layout                                    | `3`, `+`                     |
+| `hunk.view.layoutSplit`                        | Split layout                                   | `2`, `-`                     |
+| `hunk.view.layoutUnified`                      | Unified layout                                 | `1`, `=`                     |
 | `hunk.view.openThemeSelector`                  | Choose theme                                   | `t`                          |
 | `hunk.view.toggleAgentNotes`                   | Toggle agent notes                             | `a`                          |
 | `hunk.view.toggleCopyDecorations`              | Toggle copy decorations                        | _(none)_                     |

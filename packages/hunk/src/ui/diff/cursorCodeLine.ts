@@ -10,7 +10,9 @@ export function cursorPatchLine(
   cursor: LineCursor,
   sourceText?: string,
 ): string | undefined {
-  if (cursor.expandedGapKey && sourceText !== undefined && cursor.fileId === file.id) {
+  if (cursor.fileId !== file.id) return undefined;
+  if (cursor.expandedGapKey) {
+    if (sourceText === undefined) return undefined;
     const sides = contextLineStableKeySides(cursor.stableKey);
     const side = reviewExpansionSide(file.metadata.type);
     const sourceLine = sides ? (side === "old" ? sides.oldLine : sides.newLine) : cursor.target.line;
@@ -18,7 +20,7 @@ export function cursorPatchLine(
   }
 
   const hunk = file.metadata.hunks[cursor.hunkIndex];
-  if (!hunk || cursor.fileId !== file.id) return undefined;
+  if (!hunk) return undefined;
 
   const old = cursor.target.side === "old";
   let line = old ? hunk.deletionStart : hunk.additionStart;
