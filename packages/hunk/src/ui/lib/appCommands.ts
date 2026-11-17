@@ -17,6 +17,7 @@ type ScrollUnit = "step" | "viewport" | "content" | "half";
 /** Chords each command answers to after user keybindings are folded in, by command id. */
 export type ResolvedCommandKeys = ReadonlyMap<string, readonly string[]>;
 
+const CODE_HORIZONTAL_SCROLL_COLUMNS = 3;
 const FAST_CODE_HORIZONTAL_SCROLL_COLUMNS = 8;
 
 /**
@@ -253,13 +254,13 @@ function builtinCommandHandlers(
     "hunk.review.scrollCodeLeft": {
       run: (key, count) =>
         options.scrollCodeHorizontally(
-          (key.shift ? -FAST_CODE_HORIZONTAL_SCROLL_COLUMNS : -1) * count,
+          (key.shift ? -FAST_CODE_HORIZONTAL_SCROLL_COLUMNS : -CODE_HORIZONTAL_SCROLL_COLUMNS) * count,
         ),
     },
     "hunk.review.scrollCodeRight": {
       run: (key, count) =>
         options.scrollCodeHorizontally(
-          (key.shift ? FAST_CODE_HORIZONTAL_SCROLL_COLUMNS : 1) * count,
+          (key.shift ? FAST_CODE_HORIZONTAL_SCROLL_COLUMNS : CODE_HORIZONTAL_SCROLL_COLUMNS) * count,
         ),
     },
     "hunk.review.scrollCodeToStart": { run: () => options.scrollCodeToBoundary("start") },

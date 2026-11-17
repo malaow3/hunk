@@ -84,6 +84,8 @@ export const WEB_COMMAND_SUPPORT = {
   "hunk.review.stepUp": IMPLEMENTED,
   "hunk.review.scrollCodeLeft": IMPLEMENTED,
   "hunk.review.scrollCodeRight": IMPLEMENTED,
+  "hunk.review.scrollCodeToStart": terminalOnly("Scrolls to the terminal's current line boundary; the page has no line cursor."),
+  "hunk.review.scrollCodeToEnd": terminalOnly("Scrolls to the terminal's current line boundary; the page has no line cursor."),
   "hunk.review.alignCurrentLineTop": terminalOnly(
     "Aligns the terminal's line cursor; the page has no line cursor.",
   ),

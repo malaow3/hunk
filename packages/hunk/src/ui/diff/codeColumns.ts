@@ -1,4 +1,5 @@
 import { DEFAULT_TAB_WIDTH, validateTabWidth } from "../../core/run/tabWidth";
+import { sanitizeTerminalLine } from "../../lib/terminalText";
 import type { DiffFile } from "../../core/changeset/model";
 import type { LayoutMode } from "../../core/run/commandInputs";
 import { measureTextWidth } from "../lib/text";
@@ -40,6 +41,21 @@ export function measureRenderedCodeLineWidth(
   tabWidth = DEFAULT_TAB_WIDTH,
 ) {
   return measureTextWidth(expandDiffTabs((line ?? "").replace(/\n$/, ""), tabWidth));
+}
+
+/** Calculate the horizontal offset that reveals a line's non-whitespace boundary. */
+export function codeLineBoundaryOffset(
+  line: string,
+  boundary: "start" | "end",
+  viewportWidth: number,
+  tabWidth = DEFAULT_TAB_WIDTH,
+) {
+  const expanded = expandDiffTabs(sanitizeTerminalLine(line.replace(/\r?\n$/, "")), tabWidth);
+  if (!expanded.trim()) return 0;
+  if (boundary === "start") {
+    return measureTextWidth(expanded.match(/^\s*/)?.[0] ?? "");
+  }
+  return Math.max(0, measureTextWidth(expanded.trimEnd()) - Math.max(1, viewportWidth));
 }
 
 /** Track the widest rendered code line for one file and tab width. */

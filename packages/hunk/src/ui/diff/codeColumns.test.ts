@@ -1,12 +1,15 @@
 import { describe, expect, test } from "bun:test";
 import type { DiffFile } from "../../core/changeset/model";
+import { createTestDiffFile } from "../../../../../test/helpers/diff-helpers";
 import {
+  codeLineBoundaryOffset,
   expandDiffTabs,
   findMaxLineNumberInRows,
   maxFileCodeLineWidth,
   measureRenderedCodeLineWidth,
 } from "./codeColumns";
 import type { DiffRow } from "./diffRows";
+import { cursorPatchLine } from "./cursorCodeLine";
 
 /** Generate a large diff metadata fixture without checking a huge file into the repo. */
 function createLargeLineFixture(lineCount: number, widestLine: string): DiffFile {
@@ -29,6 +32,22 @@ function createLargeLineFixture(lineCount: number, widestLine: string): DiffFile
 }
 
 describe("code column measurement", () => {
+  test("finds non-whitespace boundaries using terminal columns", () => {
+    expect(codeLineBoundaryOffset("\t  日本abc  \n", "start", 4, 4)).toBe(6);
+    expect(codeLineBoundaryOffset("\t  日本abc  \n", "end", 4, 4)).toBe(9);
+    expect(codeLineBoundaryOffset("  \t ", "end", 4)).toBe(0);
+    expect(codeLineBoundaryOffset("short", "end", 20)).toBe(0);
+  });
+
+  test("finds patch lines by side and source address, not the widest line", () => {
+    const file = createTestDiffFile({ id: "file", path: "file.ts", before: "one\nold\nend\n", after: "one\nnew text\nend\n", context: 3 });
+    const cursor = { fileId: "file", hunkIndex: 0, stableKey: "", target: { side: "old" as const, line: 2 } };
+    expect(cursorPatchLine(file, cursor)).toBe("old\n");
+    expect(cursorPatchLine(file, { ...cursor, target: { side: "new", line: 2 } })).toBe("new text\n");
+    expect(cursorPatchLine(file, { ...cursor, target: { side: "new", line: 1 } })).toBe("one\n");
+    expect(cursorPatchLine(file, { ...cursor, fileId: "other" })).toBeUndefined();
+  });
+
   test("expands tabs to configurable terminal-cell stops", () => {
     expect(expandDiffTabs("\tvalue")).toBe("    value");
     expect(expandDiffTabs("a\tb", 4)).toBe("a   b");

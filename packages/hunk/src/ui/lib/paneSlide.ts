@@ -1,10 +1,10 @@
 import type { ExtensionPaneLayoutPlan, PaneBounds, PlannedPane } from "./extensionPanes";
 
 /** Duration of pane reveal and dismissal motion. */
-export const PANE_SLIDE_DURATION_MS = 140;
+export const PANE_SLIDE_DURATION_MS = 90;
 
 /** Maximum rate for committing intermediate pane animation geometry to React. */
-export const PANE_SLIDE_MAX_FPS = 60;
+export const PANE_SLIDE_MAX_FPS = 120;
 
 const PANE_SLIDE_FRAME_INTERVAL_MS = 1_000 / PANE_SLIDE_MAX_FPS;
 
@@ -15,7 +15,7 @@ export function paneSlideAnimationDuration(enabled: boolean = true): number {
 
 /** Return whether enough wall-clock time elapsed to present another animation frame. */
 export function paneSlideFrameDue(lastFrameAt: number, now: number): boolean {
-  return now - lastFrameAt >= PANE_SLIDE_FRAME_INTERVAL_MS;
+  return now >= lastFrameAt + PANE_SLIDE_FRAME_INTERVAL_MS;
 }
 
 /** Interpolate terminal edges and derive dimensions so rounded bounds stay internally exact. */

@@ -993,7 +993,7 @@ export default function (hunk) {
     }
   });
 
-  test("h/l scroll code and H/L jump to its bounds in a real PTY", async () => {
+  test("h/l scroll code and H/L follow the current line in a real PTY", async () => {
     const fixture = harness.createLongWrapFilePair();
     const session = await harness.launchHunk({
       args: ["diff", "--files", fixture.before, fixture.after, "--mode", "split", "--no-wrap"],
@@ -1008,7 +1008,11 @@ export default function (hunk) {
       expect(initial).toContain("this is a very long");
       await harness.ensureKeyboardIsLive(session);
 
+      // The deletion is short, so its end must not jump to the longer addition's end.
       await session.type("L");
+      expect(await session.text({ immediate: true })).toContain("this is a very long");
+
+      await session.type("jL");
       await harness.waitForSnapshot(session, (text) => text.includes("ge';") && !text.includes("this is a very long"), 5_000);
 
       await session.type("H");

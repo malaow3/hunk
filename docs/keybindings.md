@@ -153,8 +153,8 @@ Review and shared commands:
 | `hunk.review.saveNote`                         | Save a draft review note                       | `ctrl+s`                     |
 | `hunk.review.scrollCodeLeft`                   | Scroll code left (shifted scrolls fast)        | `left`, `shift+left`, `h`    |
 | `hunk.review.scrollCodeRight`                  | Scroll code right (shifted scrolls fast)       | `right`, `shift+right`, `l`  |
-| `hunk.review.scrollCodeToEnd`                  | Scroll code to the last column                 | `L`                          |
-| `hunk.review.scrollCodeToStart`                | Scroll code to the first column                | `H`                          |
+| `hunk.review.scrollCodeToEnd`                  | Scroll to the current line's last non-whitespace column | `L`                 |
+| `hunk.review.scrollCodeToStart`                | Scroll to the current line's first non-whitespace column | `H`                |
 | `hunk.review.startNote`                        | Add a review note                              | `c`                          |
 | `hunk.review.startVisualSelection`             | Start visual line selection                    | `v`                          |
 | `hunk.review.stepDown`                         | Move down one line or note                     | `down`, `j`                  |

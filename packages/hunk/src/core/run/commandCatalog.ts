@@ -344,7 +344,7 @@ const BUILTIN_COMMANDS = [
   },
   {
     id: "hunk.review.scrollCodeToStart",
-    title: "Scroll code to the start",
+    title: "Scroll to the start of the current line",
     category: "review",
     defaultKeys: ["H"],
     locus: "client-local",
@@ -352,7 +352,7 @@ const BUILTIN_COMMANDS = [
   },
   {
     id: "hunk.review.scrollCodeToEnd",
-    title: "Scroll code to the end",
+    title: "Scroll to the end of the current line",
     category: "review",
     defaultKeys: ["L"],
     locus: "client-local",

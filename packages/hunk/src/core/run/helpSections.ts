@@ -56,7 +56,7 @@ export const HELP_SECTIONS: readonly HelpSectionSpec[] = [
       },
       {
         commandIds: ["hunk.review.scrollCodeToStart", "hunk.review.scrollCodeToEnd"],
-        description: "first / last code columns",
+        description: "current line start / end (ignoring whitespace)",
       },
       { commandIds: ["hunk.review.jumpToTop"], description: "jump to start" },
       { commandIds: ["hunk.review.jumpToBottom"], description: "jump to end" },

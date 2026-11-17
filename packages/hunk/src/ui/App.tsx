@@ -59,10 +59,12 @@ import { DiffPane, type ReviewSelectionActionsHandle } from "./components/panes/
 import { ExtensionPaneHost } from "./components/panes/ExtensionPane";
 import { PaneDivider } from "./components/panes/PaneDivider";
 import {
+  codeLineBoundaryOffset,
   findMaxLineNumber,
   maxFileCodeLineWidth,
   resolveCodeViewportWidth,
 } from "./diff/codeColumns";
+import { cursorPatchLine } from "./diff/cursorCodeLine";
 import { useAppKeyboardShortcuts } from "./hooks/useAppKeyboardShortcuts";
 import { useIntermediateRenderAfterMount } from "./hooks/useIntermediateRenderAfterMount";
 import { useCurrentReviewRefreshController } from "./hooks/useCurrentReviewRefreshController";
@@ -1112,13 +1114,22 @@ export function App({
     [maxCodeHorizontalOffset, wrapLines],
   );
 
-  /** Reveal the first or last code columns in the current unwrapped review. */
+  /** Reveal the selected line's first or last non-whitespace code column. */
   const scrollCodeToBoundary = useCallback(
     (boundary: "start" | "end") => {
       if (wrapLines) return;
-      setCodeHorizontalOffset(boundary === "start" ? 0 : maxCodeHorizontalOffset);
+      const cursor = cursorLine === "off" ? null : review.getLineCursor();
+      const file = cursor && filteredFiles.find((candidate) => candidate.id === cursor.fileId);
+      const source = file && review.sourceStatusByFileId[file.id];
+      const line = file && cursor
+        ? cursorPatchLine(file, cursor, source?.kind === "loaded" ? source.text : undefined)
+        : undefined;
+      if (line === undefined) return;
+      setCodeHorizontalOffset(
+        clamp(codeLineBoundaryOffset(line, boundary, codeViewportWidth, tabWidth), 0, maxCodeHorizontalOffset),
+      );
     },
-    [maxCodeHorizontalOffset, wrapLines],
+    [codeViewportWidth, cursorLine, filteredFiles, maxCodeHorizontalOffset, review.getLineCursor, review.sourceStatusByFileId, tabWidth, wrapLines],
   );
 
   /** Preserve the current review position before changing the active diff layout. */

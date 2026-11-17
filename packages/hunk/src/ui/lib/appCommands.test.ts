@@ -98,8 +98,8 @@ describe("built-in command chords", () => {
     expect(press("L")).toBe("hunk.review.scrollCodeToEnd");
     expect(press("#")).toBe("hunk.view.toggleLineNumbers");
     expect(ran).toEqual([
-      "scrollCodeHorizontally:-1",
-      "scrollCodeHorizontally:1",
+      "scrollCodeHorizontally:-3",
+      "scrollCodeHorizontally:3",
       "scrollCodeToBoundary:start",
       "scrollCodeToBoundary:end",
       "toggleLineNumbers",
@@ -177,7 +177,7 @@ describe("built-in command chords", () => {
 
     dispatchAppCommand(commands, keyEvent({ name: "left" }));
     dispatchAppCommand(commands, keyEvent({ name: "left", shift: true }));
-    expect(ran).toEqual(["scrollCodeHorizontally:-1", "scrollCodeHorizontally:-8"]);
+    expect(ran).toEqual(["scrollCodeHorizontally:-3", "scrollCodeHorizontally:-8"]);
   });
 
   test("reports the vertical direction for every review-navigation alias", () => {
@@ -418,7 +418,7 @@ describe("executeAppCommand", () => {
     expect(dispatchAppCommand(commands, keyEvent({ name: "left", shift: true }))?.id).toBe(
       "hunk.review.scrollCodeLeft",
     );
-    expect(ran).toEqual(["scrollCodeHorizontally:-3", "scrollCodeHorizontally:-8"]);
+    expect(ran).toEqual(["scrollCodeHorizontally:-9", "scrollCodeHorizontally:-8"]);
   });
 
   test("applies movement counts in one semantic callback", () => {
